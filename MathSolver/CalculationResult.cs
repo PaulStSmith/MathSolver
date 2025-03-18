@@ -67,7 +67,7 @@ namespace MathSolver
             sb.AppendLine($"Actual Result: {ActualResult}");
 
             // Calculate the error between the actual and formatted result
-            double error = FormattedResult - ActualResult;
+            double error = Math.Abs(FormattedResult - ActualResult);
             sb.AppendLine($"Error: {error}");
 
             return sb.ToString();
