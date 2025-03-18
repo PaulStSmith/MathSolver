@@ -444,7 +444,7 @@ namespace MathSolver
             int step = leftToRight ? 1 : -1;
 
             // Create a temporary solver for evaluating each term
-            var tempSolver = new StepByStepMathSolver(_arithmeticType, _precision, _useSignificantDigits, direction);
+            var tempSolver = new StepByStepMathSolver(_arithmeticType, _precision, _useSignificantDigits, CalculationDirection.LeftToRight);
 
             // Iterate through each term in the summation
             for (int i = start; leftToRight ? i <= end : i >= end; i += step)
