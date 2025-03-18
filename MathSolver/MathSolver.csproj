@@ -11,4 +11,8 @@
     <PackageReference Include="MathParser.org-mXparser" Version="6.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include=".github\copolot-instructions.md" />
+  </ItemGroup>
+
 </Project>
