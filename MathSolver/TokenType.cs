@@ -39,5 +39,7 @@
         /// Represents a factorial operation.
         /// </summary>
         Factorial,
+
+        Variable,
     }
 }
