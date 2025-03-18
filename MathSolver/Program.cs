@@ -1,7 +1,10 @@
-﻿using System.Text;
+﻿using System;
 using System.Text.RegularExpressions;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 
-namespace MathSolver
+namespace StepByStepMathSolver
 {
     /// <summary>
     /// Arithmetic modes available for calculation results
@@ -354,7 +357,7 @@ namespace MathSolver
         private double EvaluatePostfix(List<ExpressionToken> postfixTokens, CalculationResult result)
         {
             Stack<double> operandStack = new Stack<double>();
-            Dictionary<int, string> valueMap = new Dictionary<int, string>(); // Maps stack positions to original values
+            Stack<string> expressionStack = new Stack<string>(); // For tracking string representations
 
             foreach (var token in postfixTokens)
             {
@@ -362,11 +365,11 @@ namespace MathSolver
                 {
                     double value = double.Parse(token.Value);
                     operandStack.Push(value);
-                    valueMap[operandStack.Count - 1] = token.Value;
+                    expressionStack.Push(token.Value);
                 }
                 else if (token.Type == TokenType.Operator)
                 {
-                    if (operandStack.Count < 2)
+                    if (operandStack.Count < 2 || expressionStack.Count < 2)
                     {
                         throw new Exception("Invalid expression format");
                     }
@@ -374,8 +377,8 @@ namespace MathSolver
                     double b = operandStack.Pop();
                     double a = operandStack.Pop();
 
-                    string bStr = valueMap.ContainsKey(operandStack.Count) ? valueMap[operandStack.Count] : b.ToString();
-                    string aStr = valueMap.ContainsKey(operandStack.Count - 1) ? valueMap[operandStack.Count - 1] : a.ToString();
+                    string bStr = expressionStack.Pop();
+                    string aStr = expressionStack.Pop();
 
                     string stepExpr = $"{aStr} {token.Value} {bStr}";
                     double stepResult = PerformOperation(a, b, token.Value);
@@ -383,7 +386,7 @@ namespace MathSolver
                     result.Steps.Add(new CalculationStep(stepExpr, stepResult));
 
                     operandStack.Push(stepResult);
-                    valueMap[operandStack.Count - 1] = stepResult.ToString();
+                    expressionStack.Push(stepResult.ToString());
                 }
             }
 
@@ -405,6 +408,7 @@ namespace MathSolver
         {
             Stack<double> operandStack = new Stack<double>();
             Dictionary<int, string> valueMap = new Dictionary<int, string>(); // Maps stack positions to original values
+            Stack<string> expressionStack = new Stack<string>(); // For tracking string representations
 
             // Process tokens in reverse order for prefix notation
             for (int i = prefixTokens.Count - 1; i >= 0; i--)
@@ -415,11 +419,11 @@ namespace MathSolver
                 {
                     double value = double.Parse(token.Value);
                     operandStack.Push(value);
-                    valueMap[operandStack.Count - 1] = token.Value;
+                    expressionStack.Push(token.Value);
                 }
                 else if (token.Type == TokenType.Operator)
                 {
-                    if (operandStack.Count < 2)
+                    if (operandStack.Count < 2 || expressionStack.Count < 2)
                     {
                         throw new Exception("Invalid expression format");
                     }
@@ -427,8 +431,8 @@ namespace MathSolver
                     double a = operandStack.Pop();
                     double b = operandStack.Pop();
 
-                    string aStr = valueMap.ContainsKey(operandStack.Count) ? valueMap[operandStack.Count] : a.ToString();
-                    string bStr = valueMap.ContainsKey(operandStack.Count - 1) ? valueMap[operandStack.Count - 1] : b.ToString();
+                    string aStr = expressionStack.Pop();
+                    string bStr = expressionStack.Pop();
 
                     string stepExpr = $"{aStr} {token.Value} {bStr}";
                     double stepResult = PerformOperation(a, b, token.Value);
@@ -436,7 +440,7 @@ namespace MathSolver
                     result.Steps.Add(new CalculationStep(stepExpr, stepResult));
 
                     operandStack.Push(stepResult);
-                    valueMap[operandStack.Count - 1] = stepResult.ToString();
+                    expressionStack.Push(stepResult.ToString());
                 }
             }
 
