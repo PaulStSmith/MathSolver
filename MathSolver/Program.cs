@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
 
 namespace MathSolver
 {
@@ -47,6 +48,67 @@ namespace MathSolver
             Type = type;
             Value = value;
             Precedence = precedence;
+        }
+    }
+
+    /// <summary>
+    /// Represents a single step in a calculation
+    /// </summary>
+    public class CalculationStep
+    {
+        public string Expression { get; set; }
+        public double Result { get; set; }
+
+        public CalculationStep(string expression, double result)
+        {
+            Expression = expression;
+            Result = result;
+        }
+
+        public override string ToString()
+        {
+            return $"{Expression} = {Result}";
+        }
+    }
+
+    /// <summary>
+    /// Contains detailed information about a calculation, including all steps
+    /// </summary>
+    public class CalculationResult
+    {
+        public string OriginalExpression { get; set; }
+        public string ArithmeticMode { get; set; }
+        public string PrecisionInfo { get; set; }
+        public string Direction { get; set; }
+        public List<CalculationStep> Steps { get; set; } = new List<CalculationStep>();
+        public double ActualResult { get; set; }
+        public double FormattedResult { get; set; }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"Solving: {OriginalExpression}");
+            sb.AppendLine($"Mode: {ArithmeticMode}");
+            sb.AppendLine($"Precision: {PrecisionInfo}");
+            sb.AppendLine($"Direction: {Direction}");
+            sb.AppendLine("Start Calculation");
+
+            for (int i = 0; i < Steps.Count; i++)
+            {
+                sb.AppendLine($"Step {i + 1}: {Steps[i]}");
+            }
+
+            sb.AppendLine("End Calculation");
+            sb.AppendLine();
+
+            sb.AppendLine($"{ArithmeticMode}d Result: {FormattedResult}");
+            sb.AppendLine($"Actual Result: {ActualResult}");
+
+            // Calculate the error between the actual and formatted result
+            double error = FormattedResult - ActualResult;
+            sb.AppendLine($"Error: {error}");
+
+            return sb.ToString();
         }
     }
 
@@ -218,23 +280,24 @@ namespace MathSolver
         private List<ExpressionToken> ConvertToPrefix(List<ExpressionToken> infixTokens)
         {
             // Reverse the infix tokens
-            infixTokens.Reverse();
+            List<ExpressionToken> reversedTokens = new List<ExpressionToken>(infixTokens);
+            reversedTokens.Reverse();
 
             // Swap parentheses
-            for (int i = 0; i < infixTokens.Count; i++)
+            for (int i = 0; i < reversedTokens.Count; i++)
             {
-                if (infixTokens[i].Type == TokenType.OpenParenthesis)
+                if (reversedTokens[i].Type == TokenType.OpenParenthesis)
                 {
-                    infixTokens[i] = new ExpressionToken(TokenType.CloseParenthesis, ")");
+                    reversedTokens[i] = new ExpressionToken(TokenType.CloseParenthesis, ")");
                 }
-                else if (infixTokens[i].Type == TokenType.CloseParenthesis)
+                else if (reversedTokens[i].Type == TokenType.CloseParenthesis)
                 {
-                    infixTokens[i] = new ExpressionToken(TokenType.OpenParenthesis, "(");
+                    reversedTokens[i] = new ExpressionToken(TokenType.OpenParenthesis, "(");
                 }
             }
 
             // Convert to postfix
-            List<ExpressionToken> postfix = ConvertToPostfix(infixTokens);
+            List<ExpressionToken> postfix = ConvertToPostfix(reversedTokens);
 
             // Reverse to get prefix
             postfix.Reverse();
@@ -283,19 +346,23 @@ namespace MathSolver
         }
 
         /// <summary>
-        /// Evaluates an expression in postfix notation (left-to-right)
+        /// Evaluates an expression in postfix notation (left-to-right) and collects steps
         /// </summary>
         /// <param name="postfixTokens">Tokens in postfix notation</param>
+        /// <param name="result">The calculation result to fill with steps</param>
         /// <returns>Result of the evaluation</returns>
-        private double EvaluatePostfix(List<ExpressionToken> postfixTokens)
+        private double EvaluatePostfix(List<ExpressionToken> postfixTokens, CalculationResult result)
         {
             Stack<double> operandStack = new Stack<double>();
+            Dictionary<int, string> valueMap = new Dictionary<int, string>(); // Maps stack positions to original values
 
             foreach (var token in postfixTokens)
             {
                 if (token.Type == TokenType.Number)
                 {
-                    operandStack.Push(double.Parse(token.Value));
+                    double value = double.Parse(token.Value);
+                    operandStack.Push(value);
+                    valueMap[operandStack.Count - 1] = token.Value;
                 }
                 else if (token.Type == TokenType.Operator)
                 {
@@ -307,8 +374,16 @@ namespace MathSolver
                     double b = operandStack.Pop();
                     double a = operandStack.Pop();
 
-                    double result = PerformOperation(a, b, token.Value);
-                    operandStack.Push(result);
+                    string bStr = valueMap.ContainsKey(operandStack.Count) ? valueMap[operandStack.Count] : b.ToString();
+                    string aStr = valueMap.ContainsKey(operandStack.Count - 1) ? valueMap[operandStack.Count - 1] : a.ToString();
+
+                    string stepExpr = $"{aStr} {token.Value} {bStr}";
+                    double stepResult = PerformOperation(a, b, token.Value);
+
+                    result.Steps.Add(new CalculationStep(stepExpr, stepResult));
+
+                    operandStack.Push(stepResult);
+                    valueMap[operandStack.Count - 1] = stepResult.ToString();
                 }
             }
 
@@ -321,13 +396,15 @@ namespace MathSolver
         }
 
         /// <summary>
-        /// Evaluates an expression in prefix notation (right-to-left)
+        /// Evaluates an expression in prefix notation (right-to-left) and collects steps
         /// </summary>
         /// <param name="prefixTokens">Tokens in prefix notation</param>
+        /// <param name="result">The calculation result to fill with steps</param>
         /// <returns>Result of the evaluation</returns>
-        private double EvaluatePrefix(List<ExpressionToken> prefixTokens)
+        private double EvaluatePrefix(List<ExpressionToken> prefixTokens, CalculationResult result)
         {
             Stack<double> operandStack = new Stack<double>();
+            Dictionary<int, string> valueMap = new Dictionary<int, string>(); // Maps stack positions to original values
 
             // Process tokens in reverse order for prefix notation
             for (int i = prefixTokens.Count - 1; i >= 0; i--)
@@ -336,7 +413,9 @@ namespace MathSolver
 
                 if (token.Type == TokenType.Number)
                 {
-                    operandStack.Push(double.Parse(token.Value));
+                    double value = double.Parse(token.Value);
+                    operandStack.Push(value);
+                    valueMap[operandStack.Count - 1] = token.Value;
                 }
                 else if (token.Type == TokenType.Operator)
                 {
@@ -348,8 +427,16 @@ namespace MathSolver
                     double a = operandStack.Pop();
                     double b = operandStack.Pop();
 
-                    double result = PerformOperation(a, b, token.Value);
-                    operandStack.Push(result);
+                    string aStr = valueMap.ContainsKey(operandStack.Count) ? valueMap[operandStack.Count] : a.ToString();
+                    string bStr = valueMap.ContainsKey(operandStack.Count - 1) ? valueMap[operandStack.Count - 1] : b.ToString();
+
+                    string stepExpr = $"{aStr} {token.Value} {bStr}";
+                    double stepResult = PerformOperation(a, b, token.Value);
+
+                    result.Steps.Add(new CalculationStep(stepExpr, stepResult));
+
+                    operandStack.Push(stepResult);
+                    valueMap[operandStack.Count - 1] = stepResult.ToString();
                 }
             }
 
@@ -481,7 +568,7 @@ namespace MathSolver
                 return latexString;
             }
 
-            // Handle simple LaTeX expressions (This is simplified for demonstration)
+            // Handle simple LaTeX expressions 
             string expr = latexString.Trim();
 
             // Replace LaTeX commands with standard math equivalents
@@ -496,6 +583,64 @@ namespace MathSolver
             expr = Regex.Replace(expr, @"\^{([^{}]*)}", "^($1)");
 
             return expr;
+        }
+
+        /// <summary>
+        /// Solves a LaTeX math expression with detailed step-by-step output
+        /// </summary>
+        /// <param name="latexExpression">The LaTeX expression to solve</param>
+        /// <returns>A calculation result with detailed steps</returns>
+        public CalculationResult SolveWithSteps(string latexExpression)
+        {
+            CalculationResult result = new CalculationResult();
+            result.OriginalExpression = latexExpression;
+            result.ArithmeticMode = _arithmeticType.ToString();
+            result.PrecisionInfo = _useSignificantDigits
+                ? $"{_precision} significant digits"
+                : $"{_precision} decimal places";
+            result.Direction = _direction.ToString();
+
+            try
+            {
+                // First, handle direct numbers (already in decimal form)
+                if (double.TryParse(latexExpression, out double directValue))
+                {
+                    result.ActualResult = directValue;
+                    result.FormattedResult = FormatNumber(directValue);
+                    return result;
+                }
+
+                // Convert from LaTeX to standard mathematical notation
+                string standardExpr = ConvertLatexToStandard(latexExpression);
+
+                // For calculating the actual result without formatting
+                var normalSolver = new StepByStepMathSolver(ArithmeticType.Normal, 10, false, _direction);
+                double actualResult = normalSolver.Solve(latexExpression);
+                result.ActualResult = actualResult;
+
+                // Tokenize the expression
+                List<ExpressionToken> tokens = Tokenize(standardExpr);
+
+                // Evaluate based on the direction and collect steps
+                double formattedResult;
+                if (_direction == CalculationDirection.LeftToRight)
+                {
+                    List<ExpressionToken> postfixTokens = ConvertToPostfix(tokens);
+                    formattedResult = EvaluatePostfix(postfixTokens, result);
+                }
+                else // RightToLeft
+                {
+                    List<ExpressionToken> prefixTokens = ConvertToPrefix(tokens);
+                    formattedResult = EvaluatePrefix(prefixTokens, result);
+                }
+
+                result.FormattedResult = formattedResult;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error solving expression: {ex.Message}");
+            }
         }
 
         /// <summary>
@@ -523,12 +668,12 @@ namespace MathSolver
                 if (_direction == CalculationDirection.LeftToRight)
                 {
                     List<ExpressionToken> postfixTokens = ConvertToPostfix(tokens);
-                    return EvaluatePostfix(postfixTokens);
+                    return EvaluatePostfix(postfixTokens, new CalculationResult());
                 }
                 else // RightToLeft
                 {
                     List<ExpressionToken> prefixTokens = ConvertToPrefix(tokens);
-                    return EvaluatePrefix(prefixTokens);
+                    return EvaluatePrefix(prefixTokens, new CalculationResult());
                 }
             }
             catch (Exception ex)
@@ -584,56 +729,60 @@ namespace MathSolver
     {
         static void Main(string[] args)
         {
-            // Test simple number
-            string simpleNumber = "1.02500125";
-            Console.WriteLine($"Expression: {simpleNumber}\n");
+            // Test with the example from the requirements
+            string exampleExpr = "1 + 2 + 3 * 4 + 5";
+            Console.WriteLine("Example Expression Test:");
 
-            TestExpressionWithAllModes(simpleNumber);
+            // Create solver with right-to-left evaluation and truncate with 1 decimal place
+            var solver = new StepByStepMathSolver(
+                ArithmeticType.Truncate,
+                1,
+                false,
+                CalculationDirection.RightToLeft);
 
-            // Test a complex expression
-            string complexExpr = "2.5 * 3.6 / 1.2 + 4.8";
-            Console.WriteLine($"\nExpression: {complexExpr}\n");
+            var result = solver.SolveWithSteps(exampleExpr);
+            Console.WriteLine(result);
+            Console.WriteLine("\n====================================\n");
 
-            Console.WriteLine("=== Left-to-Right Evaluation ===");
-            TestExpressionWithAllModes(complexExpr, CalculationDirection.LeftToRight);
-
-            Console.WriteLine("\n=== Right-to-Left Evaluation ===");
-            TestExpressionWithAllModes(complexExpr, CalculationDirection.RightToLeft);
-
-            // Test a LaTeX expression
-            string latexExpr = "\\frac{2.5 + 3.7}{1.5}";
-            Console.WriteLine($"\nLaTeX Expression: {latexExpr}\n");
-
-            Console.WriteLine("=== Left-to-Right Evaluation ===");
-            TestExpressionWithAllModes(latexExpr, CalculationDirection.LeftToRight);
-
-            Console.WriteLine("\n=== Right-to-Left Evaluation ===");
-            TestExpressionWithAllModes(latexExpr, CalculationDirection.RightToLeft);
+            // Additional test expressions
+            TestExpression("2.5 * 3.6 / 1.2 + 4.8", ArithmeticType.Truncate, 2, false);
+            TestExpression("9.75 - 3.25 + 7.5 / 2.5", ArithmeticType.Round, 1, true);
+            TestExpression("\\frac{2.5 + 3.7}{1.5}", ArithmeticType.Truncate, 3, false);
 
             Console.ReadLine();
         }
 
-        static void TestExpressionWithAllModes(string expression, CalculationDirection direction = CalculationDirection.LeftToRight)
+        static void TestExpression(
+            string expression,
+            ArithmeticType arithmeticType,
+            int precision,
+            bool useSignificantDigits)
         {
-            // Normal arithmetic (full precision)
-            var normalSolver = new StepByStepMathSolver(ArithmeticType.Normal, 10, false, direction);
-            Console.WriteLine($"Normal Arithmetic: {normalSolver.SolveToString(expression)}");
+            Console.WriteLine($"Testing: {expression}");
 
-            // Truncate to 3 decimal places
-            var truncateDecimalSolver = new StepByStepMathSolver(ArithmeticType.Truncate, 3, false, direction);
-            Console.WriteLine($"Truncate Arithmetic, 3 decimal places: {truncateDecimalSolver.SolveToString(expression)}");
+            // Test left-to-right
+            var leftToRightSolver = new StepByStepMathSolver(
+                arithmeticType,
+                precision,
+                useSignificantDigits,
+                CalculationDirection.LeftToRight);
 
-            // Truncate to 3 significant digits
-            var truncateSigDigitsSolver = new StepByStepMathSolver(ArithmeticType.Truncate, 3, true, direction);
-            Console.WriteLine($"Truncate Arithmetic, 3 significant digits: {truncateSigDigitsSolver.SolveToString(expression)}");
+            var leftToRightResult = leftToRightSolver.SolveWithSteps(expression);
+            Console.WriteLine("LEFT-TO-RIGHT EVALUATION:");
+            Console.WriteLine(leftToRightResult);
 
-            // Round to 3 decimal places
-            var roundDecimalSolver = new StepByStepMathSolver(ArithmeticType.Round, 3, false, direction);
-            Console.WriteLine($"Rounded Arithmetic, 3 decimal places: {roundDecimalSolver.SolveToString(expression)}");
+            // Test right-to-left
+            var rightToLeftSolver = new StepByStepMathSolver(
+                arithmeticType,
+                precision,
+                useSignificantDigits,
+                CalculationDirection.RightToLeft);
 
-            // Round to 3 significant digits
-            var roundSigDigitsSolver = new StepByStepMathSolver(ArithmeticType.Round, 3, true, direction);
-            Console.WriteLine($"Rounded Arithmetic, 3 significant digits: {roundSigDigitsSolver.SolveToString(expression)}");
+            var rightToLeftResult = rightToLeftSolver.SolveWithSteps(expression);
+            Console.WriteLine("\nRIGHT-TO-LEFT EVALUATION:");
+            Console.WriteLine(rightToLeftResult);
+
+            Console.WriteLine("\n====================================\n");
         }
     }
 }
