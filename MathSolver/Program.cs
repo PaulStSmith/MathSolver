@@ -16,6 +16,8 @@ namespace MathSolver
             TestExpression(@"\sum_{i=1}^{10} \frac{1}/{2^i}", ArithmeticType.Normal, 10, false);
             TestExpression(@"\sum_{i=1}^{10} \frac{1}/{2^i}", ArithmeticType.Round, 3, true);
             TestExpression(@"\sum_{i=1}^{10} \frac{1}/{2^i}", ArithmeticType.Truncate, 3, true);
+            TestExpression(@"(((2.1008-1)/2.1008)+(1/2)*((2.1008-1)/2.1008)^2+(1/3)*((2.1008-1)/2.1008)^3)", ArithmeticType.Normal, 10, false);
+            TestExpression(@"(((2.1008-1)/2.1008)+(1/2)*((2.1008-1)/2.1008)^2+(1/3)*((2.1008-1)/2.1008)^3)", ArithmeticType.Truncate, 5, false);
 
             Console.ReadLine();
         }

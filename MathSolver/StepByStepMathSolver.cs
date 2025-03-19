@@ -377,15 +377,10 @@ namespace MathSolver
 
                     // For prefix notation with right-to-left calculation, we need to swap operands for 
                     // non-commutative operations
-                    if (isPrefix && (token.Value == "-" || token.Value == "/"))
+                    if (isPrefix && (token.Value == "-" || token.Value == "/" || token.Value == "^"))
                     {
-                        var temp = a;
-                        a = b;
-                        b = temp;
-
-                        var tempStr = aStr;
-                        aStr = bStr;
-                        bStr = tempStr;
+                        (b, a) = (a, b);
+                        (bStr, aStr) = (aStr, bStr);
                     }
 
                     var stepExpr = $"{aStr} {token.Value} {bStr}";
