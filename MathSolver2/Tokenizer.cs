@@ -1,358 +1,357 @@
 ﻿using System.Text;
 
-namespace MathSolver2
+namespace MathSolver2;
+
+/// <summary>
+/// Defines the types of tokens that can be recognized by the tokenizer.
+/// </summary>
+public enum TokenType
 {
+    /// <summary>Represents a numeric value.</summary>
+    Number,
+    /// <summary>Represents a variable or identifier.</summary>
+    Variable,
+    /// <summary>Represents the '+' operator.</summary>
+    Plus,
+    /// <summary>Represents the '-' operator.</summary>
+    Minus,
+    /// <summary>Represents the '*' operator.</summary>
+    Multiply,
+    /// <summary>Represents the '/' operator.</summary>
+    Divide,
+    /// <summary>Represents the '^' operator for exponentiation.</summary>
+    Power,
+    /// <summary>Represents a left parenthesis '('.</summary>
+    LeftParenthesis,
+    /// <summary>Represents a right parenthesis ')'.</summary>
+    RightParenthesis,
+    /// <summary>Represents a left brace '{'.</summary>
+    LeftBrace,
+    /// <summary>Represents a right brace '}'.</summary>
+    RightBrace,
+    /// <summary>Represents a left bracket '[' used in LaTeX-style square root notation.</summary>
+    LeftBracket,
+    /// <summary>Represents a right bracket ']' used in LaTeX-style square root notation.</summary>
+    RightBracket,
+    /// <summary>Represents a comma ','.</summary>
+    Comma,
+    /// <summary>Represents a LaTeX command starting with '\'.</summary>
+    LatexCommand,
+    /// <summary>Represents the factorial operator '!'.</summary>
+    Factorial,
+    /// <summary>Represents an underscore '_' used in LaTeX summation.</summary>
+    Underscore,
+    /// <summary>Represents an equals sign '=' used in LaTeX summation.</summary>
+    Equals,
+    /// <summary>Represents the end of the expression.</summary>
+    EndOfExpression,
+    /// <summary>Represents an unrecognized or invalid token.</summary>
+    Error
+}
+
+/// <summary>
+/// Represents a token from the input expression.
+/// </summary>
+public class Token
+{
+    /// <summary>Gets the type of the token.</summary>
+    public TokenType Type { get; }
+
+    /// <summary>Gets the value of the token.</summary>
+    public string Value { get; }
+
+    /// <summary>Gets the position of the token in the input.</summary>
+    public SourcePosition Position { get; }
+
     /// <summary>
-    /// Defines the types of tokens that can be recognized by the tokenizer.
+    /// Initializes a new instance of the <see cref="Token"/> class.
     /// </summary>
-    public enum TokenType
+    /// <param name="type">The type of the token.</param>
+    /// <param name="value">The value of the token.</param>
+    /// <param name="position">The position of the token in the input.</param>
+    public Token(TokenType type, string value, SourcePosition position)
     {
-        /// <summary>Represents a numeric value.</summary>
-        Number,
-        /// <summary>Represents a variable or identifier.</summary>
-        Variable,
-        /// <summary>Represents the '+' operator.</summary>
-        Plus,
-        /// <summary>Represents the '-' operator.</summary>
-        Minus,
-        /// <summary>Represents the '*' operator.</summary>
-        Multiply,
-        /// <summary>Represents the '/' operator.</summary>
-        Divide,
-        /// <summary>Represents the '^' operator for exponentiation.</summary>
-        Power,
-        /// <summary>Represents a left parenthesis '('.</summary>
-        LeftParenthesis,
-        /// <summary>Represents a right parenthesis ')'.</summary>
-        RightParenthesis,
-        /// <summary>Represents a left brace '{'.</summary>
-        LeftBrace,
-        /// <summary>Represents a right brace '}'.</summary>
-        RightBrace,
-        /// <summary>Represents a left bracket '[' used in LaTeX-style square root notation.</summary>
-        LeftBracket,
-        /// <summary>Represents a right bracket ']' used in LaTeX-style square root notation.</summary>
-        RightBracket,
-        /// <summary>Represents a comma ','.</summary>
-        Comma,
-        /// <summary>Represents a LaTeX command starting with '\'.</summary>
-        LatexCommand,
-        /// <summary>Represents the factorial operator '!'.</summary>
-        Factorial,
-        /// <summary>Represents an underscore '_' used in LaTeX summation.</summary>
-        Underscore,
-        /// <summary>Represents an equals sign '=' used in LaTeX summation.</summary>
-        Equals,
-        /// <summary>Represents the end of the expression.</summary>
-        EndOfExpression,
-        /// <summary>Represents an unrecognized or invalid token.</summary>
-        Error
+        Type = type;
+        Value = value;
+        Position = position;
     }
 
     /// <summary>
-    /// Represents a token from the input expression.
+    /// Returns a string representation of the token for debugging purposes.
     /// </summary>
-    public class Token
+    public override string ToString()
     {
-        /// <summary>Gets the type of the token.</summary>
-        public TokenType Type { get; }
+        return $"{Type}: {Value} at {Position}";
+    }
+}
 
-        /// <summary>Gets the value of the token.</summary>
-        public string Value { get; }
+/// <summary>
+/// Converts an input string into a sequence of tokens.
+/// </summary>
+public class Tokenizer
+{
+    private readonly string _input;
+    private int _position;
+    private int _line;
+    private int _column;
 
-        /// <summary>Gets the position of the token in the input.</summary>
-        public SourcePosition Position { get; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Token"/> class.
-        /// </summary>
-        /// <param name="type">The type of the token.</param>
-        /// <param name="value">The value of the token.</param>
-        /// <param name="position">The position of the token in the input.</param>
-        public Token(TokenType type, string value, SourcePosition position)
-        {
-            Type = type;
-            Value = value;
-            Position = position;
-        }
-
-        /// <summary>
-        /// Returns a string representation of the token for debugging purposes.
-        /// </summary>
-        public override string ToString()
-        {
-            return $"{Type}: {Value} at {Position}";
-        }
+    /// <summary>
+    /// Initializes a new instance of the <see cref="Tokenizer"/> class.
+    /// </summary>
+    /// <param name="input">The input string to tokenize.</param>
+    public Tokenizer(string input)
+    {
+        _input = input ?? "";
+        _position = 0;
+        _line = 1;
+        _column = 1;
     }
 
     /// <summary>
-    /// Converts an input string into a sequence of tokens.
+    /// Returns the next token from the input without advancing the position.
     /// </summary>
-    public class Tokenizer
+    public Token Peek()
     {
-        private readonly string _input;
-        private int _position;
-        private int _line;
-        private int _column;
+        int savedPosition = _position;
+        int savedLine = _line;
+        int savedColumn = _column;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Tokenizer"/> class.
-        /// </summary>
-        /// <param name="input">The input string to tokenize.</param>
-        public Tokenizer(string input)
+        Token token = GetNextToken();
+
+        _position = savedPosition;
+        _line = savedLine;
+        _column = savedColumn;
+
+        return token;
+    }
+
+    /// <summary>
+    /// Returns the next token from the input and advances the position.
+    /// </summary>
+    public Token GetNextToken()
+    {
+        // Skip whitespace
+        SkipWhitespace();
+
+        if (_position >= _input.Length)
         {
-            _input = input ?? "";
-            _position = 0;
-            _line = 1;
-            _column = 1;
+            return new Token(TokenType.EndOfExpression, "",
+                new SourcePosition(_position, _position, _line, _column));
         }
 
-        /// <summary>
-        /// Returns the next token from the input without advancing the position.
-        /// </summary>
-        public Token Peek()
+        char current = _input[_position];
+        int startPosition = _position;
+        int startLine = _line;
+        int startColumn = _column;
+
+        // Check for numbers
+        if (char.IsDigit(current) || current == '.')
         {
-            int savedPosition = _position;
-            int savedLine = _line;
-            int savedColumn = _column;
-
-            Token token = GetNextToken();
-
-            _position = savedPosition;
-            _line = savedLine;
-            _column = savedColumn;
-
-            return token;
+            return ScanNumber();
         }
 
-        /// <summary>
-        /// Returns the next token from the input and advances the position.
-        /// </summary>
-        public Token GetNextToken()
+        // Check for LaTeX commands
+        if (current == '\\')
         {
-            // Skip whitespace
-            SkipWhitespace();
-
-            if (_position >= _input.Length)
-            {
-                return new Token(TokenType.EndOfExpression, "",
-                    new SourcePosition(_position, _position, _line, _column));
-            }
-
-            char current = _input[_position];
-            int startPosition = _position;
-            int startLine = _line;
-            int startColumn = _column;
-
-            // Check for numbers
-            if (char.IsDigit(current) || current == '.')
-            {
-                return ScanNumber();
-            }
-
-            // Check for LaTeX commands
-            if (current == '\\')
-            {
-                return ScanLatexCommand();
-            }
-
-            // Check for variables and function names
-            if (char.IsLetter(current))
-            {
-                return ScanIdentifier();
-            }
-
-            // Check for operators and other symbols
-            switch (current)
-            {
-                case '+':
-                    MoveNext();
-                    return new Token(TokenType.Plus, "+",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case '-':
-                    MoveNext();
-                    return new Token(TokenType.Minus, "-",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case '*':
-                    MoveNext();
-                    return new Token(TokenType.Multiply, "*",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case '/':
-                    MoveNext();
-                    return new Token(TokenType.Divide, "/",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case '^':
-                    MoveNext();
-                    return new Token(TokenType.Power, "^",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case '(':
-                    MoveNext();
-                    return new Token(TokenType.LeftParenthesis, "(",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case ')':
-                    MoveNext();
-                    return new Token(TokenType.RightParenthesis, ")",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case '[':
-                    MoveNext();
-                    return new Token(TokenType.LeftBracket, "[",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case ']':
-                    MoveNext();
-                    return new Token(TokenType.RightBracket, "]",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case '{':
-                    MoveNext();
-                    return new Token(TokenType.LeftBrace, "{",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case '}':
-                    MoveNext();
-                    return new Token(TokenType.RightBrace, "}",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case ',':
-                    MoveNext();
-                    return new Token(TokenType.Comma, ",",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                case '!':
-                    MoveNext();
-                    return new Token(TokenType.Factorial, "!",
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-                default:
-                    MoveNext(); // Consume the character even if it's not recognized
-                    return new Token(TokenType.Error, current.ToString(),
-                        new SourcePosition(startPosition, _position, startLine, startColumn));
-            }
+            return ScanLatexCommand();
         }
 
-        /// <summary>
-        /// Scans a number token from the input.
-        /// </summary>
-        private Token ScanNumber()
+        // Check for variables and function names
+        if (char.IsLetter(current))
         {
-            int startPosition = _position;
-            int startLine = _line;
-            int startColumn = _column;
+            return ScanIdentifier();
+        }
 
-            StringBuilder sb = new StringBuilder();
-            bool hasDecimalPoint = false;
-
-            while (_position < _input.Length)
-            {
-                char current = _input[_position];
-
-                if (char.IsDigit(current))
-                {
-                    sb.Append(current);
-                    MoveNext();
-                }
-                else if (current == '.' && !hasDecimalPoint)
-                {
-                    sb.Append(current);
-                    hasDecimalPoint = true;
-                    MoveNext();
-                }
-                else
-                {
-                    break;
-                }
-            }
-
-            string numberStr = sb.ToString();
-
-            // If it's just a decimal point with no digits, treat it as an error
-            if (numberStr == ".")
-            {
-                return new Token(TokenType.Error, numberStr,
+        // Check for operators and other symbols
+        switch (current)
+        {
+            case '+':
+                MoveNext();
+                return new Token(TokenType.Plus, "+",
                     new SourcePosition(startPosition, _position, startLine, startColumn));
-            }
-
-            return new Token(TokenType.Number, numberStr,
-                new SourcePosition(startPosition, _position - 1, startLine, startColumn));
+            case '-':
+                MoveNext();
+                return new Token(TokenType.Minus, "-",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '*':
+                MoveNext();
+                return new Token(TokenType.Multiply, "*",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '/':
+                MoveNext();
+                return new Token(TokenType.Divide, "/",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '^':
+                MoveNext();
+                return new Token(TokenType.Power, "^",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '(':
+                MoveNext();
+                return new Token(TokenType.LeftParenthesis, "(",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case ')':
+                MoveNext();
+                return new Token(TokenType.RightParenthesis, ")",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '[':
+                MoveNext();
+                return new Token(TokenType.LeftBracket, "[",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case ']':
+                MoveNext();
+                return new Token(TokenType.RightBracket, "]",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '{':
+                MoveNext();
+                return new Token(TokenType.LeftBrace, "{",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '}':
+                MoveNext();
+                return new Token(TokenType.RightBrace, "}",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case ',':
+                MoveNext();
+                return new Token(TokenType.Comma, ",",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '!':
+                MoveNext();
+                return new Token(TokenType.Factorial, "!",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            default:
+                MoveNext(); // Consume the character even if it's not recognized
+                return new Token(TokenType.Error, current.ToString(),
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
         }
+    }
 
-        /// <summary>
-        /// Scans an identifier (variable or function name) from the input.
-        /// </summary>
-        private Token ScanIdentifier()
+    /// <summary>
+    /// Scans a number token from the input.
+    /// </summary>
+    private Token ScanNumber()
+    {
+        int startPosition = _position;
+        int startLine = _line;
+        int startColumn = _column;
+
+        StringBuilder sb = new StringBuilder();
+        bool hasDecimalPoint = false;
+
+        while (_position < _input.Length)
         {
-            int startPosition = _position;
-            int startLine = _line;
-            int startColumn = _column;
+            char current = _input[_position];
 
-            StringBuilder sb = new StringBuilder();
-
-            while (_position < _input.Length && (char.IsLetterOrDigit(_input[_position]) || _input[_position] == '_'))
+            if (char.IsDigit(current))
             {
-                sb.Append(_input[_position]);
+                sb.Append(current);
                 MoveNext();
             }
-
-            return new Token(TokenType.Variable, sb.ToString(),
-                new SourcePosition(startPosition, _position - 1, startLine, startColumn));
+            else if (current == '.' && !hasDecimalPoint)
+            {
+                sb.Append(current);
+                hasDecimalPoint = true;
+                MoveNext();
+            }
+            else
+            {
+                break;
+            }
         }
 
-        /// <summary>
-        /// Scans a LaTeX command from the input.
-        /// </summary>
-        private Token ScanLatexCommand()
-        {
-            int startPosition = _position;
-            int startLine = _line;
-            int startColumn = _column;
+        string numberStr = sb.ToString();
 
-            // Skip the backslash
+        // If it's just a decimal point with no digits, treat it as an error
+        if (numberStr == ".")
+        {
+            return new Token(TokenType.Error, numberStr,
+                new SourcePosition(startPosition, _position, startLine, startColumn));
+        }
+
+        return new Token(TokenType.Number, numberStr,
+            new SourcePosition(startPosition, _position - 1, startLine, startColumn));
+    }
+
+    /// <summary>
+    /// Scans an identifier (variable or function name) from the input.
+    /// </summary>
+    private Token ScanIdentifier()
+    {
+        int startPosition = _position;
+        int startLine = _line;
+        int startColumn = _column;
+
+        StringBuilder sb = new StringBuilder();
+
+        while (_position < _input.Length && (char.IsLetterOrDigit(_input[_position]) || _input[_position] == '_'))
+        {
+            sb.Append(_input[_position]);
             MoveNext();
+        }
 
-            StringBuilder sb = new StringBuilder();
+        return new Token(TokenType.Variable, sb.ToString(),
+            new SourcePosition(startPosition, _position - 1, startLine, startColumn));
+    }
 
-            // LaTeX command names can only contain letters
-            while (_position < _input.Length && char.IsLetter(_input[_position]))
-            {
-                sb.Append(_input[_position]);
-                MoveNext();
-            }
+    /// <summary>
+    /// Scans a LaTeX command from the input.
+    /// </summary>
+    private Token ScanLatexCommand()
+    {
+        int startPosition = _position;
+        int startLine = _line;
+        int startColumn = _column;
 
-            if (sb.Length == 0)
-            {
-                // Just a backslash with no command name
-                return new Token(TokenType.Error, "\\",
-                    new SourcePosition(startPosition, _position - 1, startLine, startColumn));
-            }
+        // Skip the backslash
+        MoveNext();
 
-            return new Token(TokenType.LatexCommand, sb.ToString(),
+        StringBuilder sb = new StringBuilder();
+
+        // LaTeX command names can only contain letters
+        while (_position < _input.Length && char.IsLetter(_input[_position]))
+        {
+            sb.Append(_input[_position]);
+            MoveNext();
+        }
+
+        if (sb.Length == 0)
+        {
+            // Just a backslash with no command name
+            return new Token(TokenType.Error, "\\",
                 new SourcePosition(startPosition, _position - 1, startLine, startColumn));
         }
 
-        /// <summary>
-        /// Skips whitespace characters in the input.
-        /// </summary>
-        private void SkipWhitespace()
+        return new Token(TokenType.LatexCommand, sb.ToString(),
+            new SourcePosition(startPosition, _position - 1, startLine, startColumn));
+    }
+
+    /// <summary>
+    /// Skips whitespace characters in the input.
+    /// </summary>
+    private void SkipWhitespace()
+    {
+        while (_position < _input.Length && char.IsWhiteSpace(_input[_position]))
         {
-            while (_position < _input.Length && char.IsWhiteSpace(_input[_position]))
-            {
-                MoveNext();
-            }
+            MoveNext();
         }
+    }
 
-        /// <summary>
-        /// Moves to the next character in the input and updates line and column information.
-        /// </summary>
-        private void MoveNext()
+    /// <summary>
+    /// Moves to the next character in the input and updates line and column information.
+    /// </summary>
+    private void MoveNext()
+    {
+        if (_position < _input.Length)
         {
-            if (_position < _input.Length)
+            if (_input[_position] == '\n')
             {
-                if (_input[_position] == '\n')
-                {
-                    _line++;
-                    _column = 1;
-                }
-                else
-                {
-                    _column++;
-                }
-
-                _position++;
+                _line++;
+                _column = 1;
             }
+            else
+            {
+                _column++;
+            }
+
+            _position++;
         }
     }
 }

@@ -1,39 +1,38 @@
-﻿namespace MathSolver2
+﻿namespace MathSolver2;
+
+/// <summary>
+/// Type of arithmetic to use for calculations.
+/// </summary>
+public enum ArithmeticType
 {
     /// <summary>
-    /// Type of arithmetic to use for calculations.
+    /// No rounding or truncation.
     /// </summary>
-    public enum ArithmeticType
-    {
-        /// <summary>
-        /// No rounding or truncation.
-        /// </summary>
-        Normal,
-
-        /// <summary>
-        /// Truncate to specified precision.
-        /// </summary>
-        Truncate,
-
-        /// <summary>
-        /// Round to specified precision.
-        /// </summary>
-        Round
-    }
+    Normal,
 
     /// <summary>
-    /// Direction for evaluating expressions.
+    /// Truncate to specified precision.
     /// </summary>
-    public enum CalculationDirection
-    {
-        /// <summary>
-        /// Evaluate from left to right.
-        /// </summary>
-        LeftToRight,
+    Truncate,
 
-        /// <summary>
-        /// Evaluate from right to left.
-        /// </summary>
-        RightToLeft
-    }
+    /// <summary>
+    /// Round to specified precision.
+    /// </summary>
+    Round
+}
+
+/// <summary>
+/// Direction for evaluating expressions.
+/// </summary>
+public enum CalculationDirection
+{
+    /// <summary>
+    /// Evaluate from left to right.
+    /// </summary>
+    LeftToRight,
+
+    /// <summary>
+    /// Evaluate from right to left.
+    /// </summary>
+    RightToLeft
 }
