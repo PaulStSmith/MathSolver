@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-
-namespace MathSolver
+﻿namespace MathSolver
 {
     /// <summary>
     /// Example usage of the StepByStepMathSolver
@@ -12,10 +8,10 @@ namespace MathSolver
         static void Main(string[] args)
         {
             // Additional test expressions
-            TestExpression(@"(0.000125 + 30.78666 - 0.080945) + (0.855^2 - \frac{0.75}/{8})^3", ArithmeticType.Truncate, 4, false);
-            TestExpression(@"\sum_{i=1}^{10} \frac{1}/{2^i}", ArithmeticType.Normal, 10, false);
-            TestExpression(@"\sum_{i=1}^{10} \frac{1}/{2^i}", ArithmeticType.Round, 3, true);
-            TestExpression(@"\sum_{i=1}^{10} \frac{1}/{2^i}", ArithmeticType.Truncate, 3, true);
+            TestExpression(@"(0.000125 + 30.78666 - 0.080945) + (0.855^2 - \frac{0.75}{8})^3", ArithmeticType.Truncate, 4, false);
+            TestExpression(@"\sum_{i=1}^{10} \frac{1}{2^i}", ArithmeticType.Normal, 10, false);
+            TestExpression(@"\sum_{i=1}^{10} \frac{1}{2^i}", ArithmeticType.Round, 3, true);
+            TestExpression(@"\sum_{i=1}^{10} \frac{1}{2^i}", ArithmeticType.Truncate, 3, true);
             TestExpression(@"(((2.1008-1)/2.1008)+(1/2)*((2.1008-1)/2.1008)^2+(1/3)*((2.1008-1)/2.1008)^3)", ArithmeticType.Normal, 10, false);
             TestExpression(@"(((2.1008-1)/2.1008)+(1/2)*((2.1008-1)/2.1008)^2+(1/3)*((2.1008-1)/2.1008)^3)", ArithmeticType.Truncate, 5, false);
 
@@ -31,7 +27,7 @@ namespace MathSolver
             Console.WriteLine($"Testing: {expression}");
 
             // Test left-to-right
-            var leftToRightSolver = new StepByStepMathSolver(
+            var leftToRightSolver = new MathSolver(
                 arithmeticType,
                 precision,
                 useSignificantDigits,
@@ -42,7 +38,7 @@ namespace MathSolver
             Console.WriteLine(leftToRightResult);
 
             // Test right-to-left
-            var rightToLeftSolver = new StepByStepMathSolver(
+            var rightToLeftSolver = new MathSolver(
                 arithmeticType,
                 precision,
                 useSignificantDigits,

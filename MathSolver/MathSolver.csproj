@@ -8,11 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MathParser.org-mXparser" Version="6.1.0" />
+    <Compile Remove=".github\**" />
+    <EmbeddedResource Remove=".github\**" />
+    <None Remove=".github\**" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include=".github\copolot-instructions.md" />
+    <PackageReference Include="MathParser.org-mXparser" Version="6.1.0" />
   </ItemGroup>
 
 </Project>
