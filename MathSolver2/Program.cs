@@ -9,7 +9,7 @@
             Console.WriteLine("======================================");
 
             // Create a basic expression to test
-            string expression = "2.7182818 * (1 + 5.5 / 2.1)";
+            string expression = @"e^0.15";
             Console.WriteLine($"Expression: {expression}");
             Console.WriteLine();
 
@@ -18,37 +18,10 @@
             DemoArithmeticMode(expression, ArithmeticType.Normal, 4, false);
             Console.WriteLine();
 
-            // Test with Truncate to decimal places
-            Console.WriteLine("Truncate to 2 Decimal Places:");
-            DemoArithmeticMode(expression, ArithmeticType.Truncate, 2, false);
-            Console.WriteLine();
-
-            // Test with Round to decimal places
-            Console.WriteLine("Round to 2 Decimal Places:");
-            DemoArithmeticMode(expression, ArithmeticType.Round, 2, false);
-            Console.WriteLine();
-
-            // Test with Truncate to significant digits
-            Console.WriteLine("Truncate to 3 Significant Digits:");
-            DemoArithmeticMode(expression, ArithmeticType.Truncate, 3, true);
-            Console.WriteLine();
-
             // Test with Round to significant digits
             Console.WriteLine("Round to 3 Significant Digits:");
             DemoArithmeticMode(expression, ArithmeticType.Round, 3, true);
             Console.WriteLine();
-
-            // Test with LaTeX expression
-            string latexExpression = "\\frac{2.7182818 * 5.5}{2.1 + 3.5}";
-            Console.WriteLine($"LaTeX Expression: {latexExpression}");
-            Console.WriteLine();
-
-            Console.WriteLine("Normal Arithmetic for LaTeX:");
-            DemoArithmeticMode(latexExpression, ArithmeticType.Normal, 4, false);
-            Console.WriteLine();
-
-            Console.WriteLine("Round to 2 Decimal Places for LaTeX:");
-            DemoArithmeticMode(latexExpression, ArithmeticType.Round, 2, false);
 
             Console.WriteLine("\nDemo complete!");
         }

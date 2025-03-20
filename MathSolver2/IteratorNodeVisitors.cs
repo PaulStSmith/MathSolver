@@ -5,13 +5,20 @@ using System.Text;
 namespace MathSolver2
 {
     /// <summary>
-    /// Extension methods for the EnhancedStepByStepVisitor to handle iterator nodes
+    /// Extension methods for the EnhancedStepByStepVisitor to handle iterator nodes.
     /// </summary>
     public static class IteratorNodeVisitors
     {
         /// <summary>
-        /// Visits a summation node and records the steps
+        /// Visits a summation node and records the steps for evaluating the summation.
         /// </summary>
+        /// <param name="visitor">The arithmetic visitor used for evaluating expressions.</param>
+        /// <param name="node">The summation node to be visited.</param>
+        /// <param name="variables">The dictionary of variables and their current values.</param>
+        /// <param name="formatter">The formatter used to format expressions.</param>
+        /// <param name="formatNumber">A function to format numeric results.</param>
+        /// <param name="getFormatInfo">A function to retrieve formatting information.</param>
+        /// <returns>A <see cref="StepByStepResult"/> containing the result and the steps taken.</returns>
         public static StepByStepResult VisitSummation(
             this StepByStepArithmeticVisitor visitor,
             SummationNode node,
@@ -31,8 +38,8 @@ namespace MathSolver2
             allSteps.AddRange(endResult.Steps);
 
             // We need to handle non-integer bounds as an error
-            if (Math.Abs(startResult.Value - Math.Round(startResult.Value)) > Precision.Epsilon ||
-                Math.Abs(endResult.Value - Math.Round(endResult.Value)) > Precision.Epsilon)
+            if (Math.Abs(startResult.Value - Math.Round(startResult.Value)) > MathConstants.Epsilon ||
+                Math.abs(endResult.Value - Math.Round(endResult.Value)) > MathConstants.Epsilon)
             {
                 throw new EvaluationException("Summation bounds must be integers", node.Position);
             }
@@ -111,8 +118,15 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Visits a product node and records the steps
+        /// Visits a product node and records the steps for evaluating the product.
         /// </summary>
+        /// <param name="visitor">The arithmetic visitor used for evaluating expressions.</param>
+        /// <param name="node">The product node to be visited.</param>
+        /// <param name="variables">The dictionary of variables and their current values.</param>
+        /// <param name="formatter">The formatter used to format expressions.</param>
+        /// <param name="formatNumber">A function to format numeric results.</param>
+        /// <param name="getFormatInfo">A function to retrieve formatting information.</param>
+        /// <returns>A <see cref="StepByStepResult"/> containing the result and the steps taken.</returns>
         public static StepByStepResult VisitProduct(
             this StepByStepArithmeticVisitor visitor,
             ProductNode node,
@@ -132,8 +146,8 @@ namespace MathSolver2
             allSteps.AddRange(endResult.Steps);
 
             // We need to handle non-integer bounds as an error
-            if (Math.Abs(startResult.Value - Math.Round(startResult.Value)) > Precision.Epsilon ||
-                Math.Abs(endResult.Value - Math.Round(endResult.Value)) > Precision.Epsilon)
+            if (Math.Abs(startResult.Value - Math.Round(startResult.Value)) > MathConstants.Epsilon ||
+                Math.Abs(endResult.Value - Math.Round(endResult.Value)) > MathConstants.Epsilon)
             {
                 throw new EvaluationException("Product bounds must be integers", node.Position);
             }

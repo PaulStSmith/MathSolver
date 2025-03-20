@@ -3,41 +3,72 @@
 namespace MathSolver2
 {
     /// <summary>
-    /// Defines the types of tokens that can be recognized by the tokenizer
+    /// Defines the types of tokens that can be recognized by the tokenizer.
     /// </summary>
     public enum TokenType
     {
+        /// <summary>Represents a numeric value.</summary>
         Number,
+        /// <summary>Represents a variable or identifier.</summary>
         Variable,
+        /// <summary>Represents the '+' operator.</summary>
         Plus,
+        /// <summary>Represents the '-' operator.</summary>
         Minus,
+        /// <summary>Represents the '*' operator.</summary>
         Multiply,
+        /// <summary>Represents the '/' operator.</summary>
         Divide,
+        /// <summary>Represents the '^' operator for exponentiation.</summary>
         Power,
+        /// <summary>Represents a left parenthesis '('.</summary>
         LeftParenthesis,
+        /// <summary>Represents a right parenthesis ')'.</summary>
         RightParenthesis,
+        /// <summary>Represents a left brace '{'.</summary>
         LeftBrace,
+        /// <summary>Represents a right brace '}'.</summary>
         RightBrace,
-        LeftBracket,    // [ - for \sqrt[n]{x}
-        RightBracket,   // ] - for \sqrt[n]{x}
+        /// <summary>Represents a left bracket '[' used in LaTeX-style square root notation.</summary>
+        LeftBracket,
+        /// <summary>Represents a right bracket ']' used in LaTeX-style square root notation.</summary>
+        RightBracket,
+        /// <summary>Represents a comma ','.</summary>
         Comma,
+        /// <summary>Represents a LaTeX command starting with '\'.</summary>
         LatexCommand,
+        /// <summary>Represents the factorial operator '!'.</summary>
         Factorial,
-        Underscore,     // _ - for \sum_{i=1}
-        Equals,         // = - for i=1 in \sum_{i=1}
+        /// <summary>Represents an underscore '_' used in LaTeX summation.</summary>
+        Underscore,
+        /// <summary>Represents an equals sign '=' used in LaTeX summation.</summary>
+        Equals,
+        /// <summary>Represents the end of the expression.</summary>
         EndOfExpression,
+        /// <summary>Represents an unrecognized or invalid token.</summary>
         Error
     }
 
     /// <summary>
-    /// Represents a token from the input expression
+    /// Represents a token from the input expression.
     /// </summary>
     public class Token
     {
+        /// <summary>Gets the type of the token.</summary>
         public TokenType Type { get; }
+
+        /// <summary>Gets the value of the token.</summary>
         public string Value { get; }
+
+        /// <summary>Gets the position of the token in the input.</summary>
         public SourcePosition Position { get; }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Token"/> class.
+        /// </summary>
+        /// <param name="type">The type of the token.</param>
+        /// <param name="value">The value of the token.</param>
+        /// <param name="position">The position of the token in the input.</param>
         public Token(TokenType type, string value, SourcePosition position)
         {
             Type = type;
@@ -45,6 +76,9 @@ namespace MathSolver2
             Position = position;
         }
 
+        /// <summary>
+        /// Returns a string representation of the token for debugging purposes.
+        /// </summary>
         public override string ToString()
         {
             return $"{Type}: {Value} at {Position}";
@@ -52,7 +86,7 @@ namespace MathSolver2
     }
 
     /// <summary>
-    /// Converts an input string into a sequence of tokens
+    /// Converts an input string into a sequence of tokens.
     /// </summary>
     public class Tokenizer
     {
@@ -61,6 +95,10 @@ namespace MathSolver2
         private int _line;
         private int _column;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Tokenizer"/> class.
+        /// </summary>
+        /// <param name="input">The input string to tokenize.</param>
         public Tokenizer(string input)
         {
             _input = input ?? "";
@@ -70,7 +108,7 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Returns the next token from the input without advancing the position
+        /// Returns the next token from the input without advancing the position.
         /// </summary>
         public Token Peek()
         {
@@ -88,7 +126,7 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Returns the next token from the input and advances the position
+        /// Returns the next token from the input and advances the position.
         /// </summary>
         public Token GetNextToken()
         {
@@ -187,7 +225,7 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Scans a number token
+        /// Scans a number token from the input.
         /// </summary>
         private Token ScanNumber()
         {
@@ -233,7 +271,7 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Scans an identifier (variable or function name)
+        /// Scans an identifier (variable or function name) from the input.
         /// </summary>
         private Token ScanIdentifier()
         {
@@ -254,7 +292,7 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Scans a LaTeX command
+        /// Scans a LaTeX command from the input.
         /// </summary>
         private Token ScanLatexCommand()
         {
@@ -286,7 +324,7 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Skips whitespace characters
+        /// Skips whitespace characters in the input.
         /// </summary>
         private void SkipWhitespace()
         {
@@ -297,7 +335,7 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Moves to the next character in the input and updates line and column information
+        /// Moves to the next character in the input and updates line and column information.
         /// </summary>
         private void MoveNext()
         {

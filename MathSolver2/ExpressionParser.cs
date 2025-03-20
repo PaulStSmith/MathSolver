@@ -2,16 +2,19 @@
 
 namespace MathSolver2
 {
-
     /// <summary>
-    /// Parses tokens into an Abstract Syntax Tree
+    /// Parses tokens into an Abstract Syntax Tree (AST) for mathematical expressions.
     /// </summary>
     public class ExpressionParser
     {
         private readonly Tokenizer _tokenizer;
         private readonly Dictionary<string, Func<SourcePosition, IExpressionNode>> _latexCommandHandlers;
-        private Token _currentToken;
+        private Token? _currentToken;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ExpressionParser"/> class with the given input string.
+        /// </summary>
+        /// <param name="input">The input string to parse.</param>
         public ExpressionParser(string input)
         {
             _tokenizer = new Tokenizer(input);
@@ -34,16 +37,21 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Registers a new LaTeX command handler
+        /// Registers a new LaTeX command handler for parsing custom commands.
         /// </summary>
+        /// <param name="command">The LaTeX command name (e.g., "frac").</param>
+        /// <param name="handler">The handler function to process the command.</param>
+        /// <exception cref="ArgumentNullException">Thrown if the handler is null.</exception>
         public void RegisterCommandHandler(string command, Func<SourcePosition, IExpressionNode> handler)
         {
             _latexCommandHandlers[command.ToLower()] = handler ?? throw new ArgumentNullException(nameof(handler));
         }
 
         /// <summary>
-        /// Parses the expression and returns the root node of the AST
+        /// Parses the input string and returns the root node of the Abstract Syntax Tree (AST).
         /// </summary>
+        /// <returns>The root node of the parsed AST.</returns>
+        /// <exception cref="ParserException">Thrown if there are unexpected tokens in the input.</exception>
         public IExpressionNode Parse()
         {
             IExpressionNode node = ParseExpression();
@@ -57,8 +65,9 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses an expression (addition, subtraction)
+        /// Parses an expression, handling addition and subtraction.
         /// </summary>
+        /// <returns>The parsed expression node.</returns>
         private IExpressionNode ParseExpression()
         {
             IExpressionNode left = ParseTerm();
@@ -89,8 +98,9 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a term (multiplication, division)
+        /// Parses a term, handling multiplication and division.
         /// </summary>
+        /// <returns>The parsed term node.</returns>
         private IExpressionNode ParseTerm()
         {
             IExpressionNode left = ParseFactor();
@@ -121,8 +131,9 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a factor (power)
+        /// Parses a factor, handling exponentiation.
         /// </summary>
+        /// <returns>The parsed factor node.</returns>
         private IExpressionNode ParseFactor()
         {
             IExpressionNode left = ParsePrimary();
@@ -146,8 +157,9 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a primary expression (number, variable, parenthesized expression, function call)
+        /// Parses a primary expression, such as numbers, variables, or parenthesized expressions.
         /// </summary>
+        /// <returns>The parsed primary expression node.</returns>
         private IExpressionNode ParsePrimary()
         {
             Token token = _currentToken;
@@ -203,8 +215,10 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses LaTeX commands like \frac, \sqrt, etc.
+        /// Parses a LaTeX command and returns the corresponding expression node.
         /// </summary>
+        /// <returns>The parsed LaTeX command node.</returns>
+        /// <exception cref="ParserException">Thrown if the command is unsupported.</exception>
         private IExpressionNode ParseLatexCommand()
         {
             Token token = _currentToken;
@@ -222,8 +236,10 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a LaTeX \frac command
+        /// Parses a LaTeX \frac command, representing a fraction.
         /// </summary>
+        /// <param name="commandPosition">The position of the command in the input.</param>
+        /// <returns>The parsed fraction node.</returns>
         private IExpressionNode ParseFracCommand(SourcePosition commandPosition)
         {
             // Expect opening brace for numerator
@@ -276,8 +292,10 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a LaTeX \sum command
+        /// Parses a LaTeX \sum command, representing summation.
         /// </summary>
+        /// <param name="commandPosition">The position of the command in the input.</param>
+        /// <returns>The parsed summation node.</returns>
         private IExpressionNode ParseSumCommand(SourcePosition commandPosition)
         {
             // Check for subscript (_) indicating the lower bound
@@ -317,8 +335,10 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a LaTeX \prod command (product notation)
+        /// Parses a LaTeX \prod command, representing product notation.
         /// </summary>
+        /// <param name="commandPosition">The position of the command in the input.</param>
+        /// <returns>The parsed product node.</returns>
         private IExpressionNode ParseProductCommand(SourcePosition commandPosition)
         {
             // Check for subscript (_) indicating the lower bound
@@ -358,8 +378,10 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a LaTeX \sqrt command
+        /// Parses a LaTeX \sqrt command, representing a square root or general root.
         /// </summary>
+        /// <param name="commandPosition">The position of the command in the input.</param>
+        /// <returns>The parsed square root node.</returns>
         private IExpressionNode ParseSqrtCommand(SourcePosition commandPosition)
         {
             // Check if this is a general root with an optional order (e.g., \sqrt[3]{x})
@@ -420,8 +442,11 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a simple function LaTeX command like \sin, \cos, etc.
+        /// Parses a simple function LaTeX command, such as \sin or \cos.
         /// </summary>
+        /// <param name="functionName">The name of the function (e.g., "sin").</param>
+        /// <param name="commandPosition">The position of the command in the input.</param>
+        /// <returns>The parsed function node.</returns>
         private IExpressionNode ParseSimpleFunctionCommand(string functionName, SourcePosition commandPosition)
         {
             // Parse the argument to the function
@@ -440,8 +465,10 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a multiplication LaTeX command like \cdot or \times
+        /// Parses a multiplication LaTeX command, such as \cdot or \times.
         /// </summary>
+        /// <param name="commandPosition">The position of the command in the input.</param>
+        /// <returns>The parsed multiplication node.</returns>
         private IExpressionNode ParseMultiplicationCommand(SourcePosition commandPosition)
         {
             // In this implementation, we're treating \cdot and \times as regular multiplication operators
@@ -458,8 +485,10 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses a braced expression like {expression}
+        /// Parses an expression enclosed in braces (e.g., {expression}).
         /// </summary>
+        /// <returns>The parsed braced expression node.</returns>
+        /// <exception cref="ParserException">Thrown if the braces are mismatched.</exception>
         private IExpressionNode ParseBracedExpression()
         {
             // Expect opening brace
@@ -485,8 +514,9 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses either a braced expression or a primary expression (for function arguments)
+        /// Parses either a braced expression or a primary expression.
         /// </summary>
+        /// <returns>The parsed expression node.</returns>
         private IExpressionNode ParseBracedExpressionOrPrimary()
         {
             if (_currentToken.Type == TokenType.LeftBrace)
@@ -500,8 +530,9 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses an iteration range (variable = start)
+        /// Parses an iteration range, such as a variable with a start value.
         /// </summary>
+        /// <returns>The parsed iteration range.</returns>
         private IterationRange ParseIterationRange()
         {
             // Parse the range either with braces or without
@@ -528,8 +559,9 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Parses the content of an iteration range (variable = start)
+        /// Parses the content of an iteration range, such as variable = start.
         /// </summary>
+        /// <returns>The parsed iteration range content.</returns>
         private IterationRange ParseIterationRangeContent()
         {
             // Expect a variable name
@@ -574,7 +606,7 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Advances to the next token
+        /// Advances to the next token in the input.
         /// </summary>
         private void NextToken()
         {
@@ -582,8 +614,10 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Expects a token of a specific type and advances to the next token
+        /// Ensures the current token matches the expected type and advances to the next token.
         /// </summary>
+        /// <param name="type">The expected token type.</param>
+        /// <exception cref="ParserException">Thrown if the token type does not match.</exception>
         private void Expect(TokenType type)
         {
             if (_currentToken.Type != type)
@@ -594,15 +628,26 @@ namespace MathSolver2
             NextToken();
         }
 
-
         /// <summary>
-        /// Helper class for iteration ranges
+        /// Represents an iteration range with a variable and start value.
         /// </summary>
         private class IterationRange
         {
+            /// <summary>
+            /// Gets the variable name in the iteration range.
+            /// </summary>
             public string Variable { get; }
+
+            /// <summary>
+            /// Gets the start value of the iteration range.
+            /// </summary>
             public IExpressionNode Start { get; }
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="IterationRange"/> class.
+            /// </summary>
+            /// <param name="variable">The variable name.</param>
+            /// <param name="start">The start value.</param>
             public IterationRange(string variable, IExpressionNode start)
             {
                 Variable = variable;

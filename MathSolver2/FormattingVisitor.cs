@@ -4,45 +4,73 @@ using System.Text;
 namespace MathSolver2
 {
     /// <summary>
-    /// Output format for the expression
+    /// Output format for the expression.
     /// </summary>
     public enum OutputFormat
     {
+        /// <summary>
+        /// Standard mathematical notation.
+        /// </summary>
         Standard,
+
+        /// <summary>
+        /// LaTeX mathematical notation.
+        /// </summary>
         LaTeX
     }
 
     /// <summary>
-    /// Formats an expression tree as a string
+    /// Formats an expression tree as a string.
     /// </summary>
     public class FormattingVisitor : IExpressionVisitor<string>
     {
         private readonly OutputFormat _format;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="FormattingVisitor"/> class.
+        /// </summary>
+        /// <param name="format">The output format for the expression.</param>
         public FormattingVisitor(OutputFormat format = OutputFormat.Standard)
         {
             _format = format;
         }
 
         /// <summary>
-        /// Formats the expression as a string
+        /// Formats the given expression node as a string.
         /// </summary>
+        /// <param name="node">The expression node to format.</param>
+        /// <returns>A string representation of the expression.</returns>
         public string Format(IExpressionNode node)
         {
             return node.Accept(this);
         }
 
+        /// <summary>
+        /// Visits a number node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The number node to visit.</param>
+        /// <returns>The formatted number as a string.</returns>
         public string VisitNumber(NumberNode node)
         {
             // Format the number using the invariant culture to ensure consistent output
             return node.Value.ToString(CultureInfo.InvariantCulture);
         }
 
+        /// <summary>
+        /// Visits a variable node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The variable node to visit.</param>
+        /// <returns>The variable name as a string.</returns>
         public string VisitVariable(VariableNode node)
         {
             return node.Name;
         }
 
+        /// <summary>
+        /// Visits an addition node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The addition node to visit.</param>
+        /// <returns>The formatted addition expression as a string.</returns>
         public string VisitAddition(AdditionNode node)
         {
             string left = node.Left.Accept(this);
@@ -58,6 +86,11 @@ namespace MathSolver2
             return $"{left} + {right}";
         }
 
+        /// <summary>
+        /// Visits a subtraction node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The subtraction node to visit.</param>
+        /// <returns>The formatted subtraction expression as a string.</returns>
         public string VisitSubtraction(SubtractionNode node)
         {
             string left = node.Left.Accept(this);
@@ -66,6 +99,11 @@ namespace MathSolver2
             return $"{left} - {right}";
         }
 
+        /// <summary>
+        /// Visits a multiplication node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The multiplication node to visit.</param>
+        /// <returns>The formatted multiplication expression as a string.</returns>
         public string VisitMultiplication(MultiplicationNode node)
         {
             string left = FormatWithParenthesesIfNeeded(node.Left, IsLowerPrecedence(node.Left, node));
@@ -79,6 +117,11 @@ namespace MathSolver2
             return $"{left} * {right}";
         }
 
+        /// <summary>
+        /// Visits a division node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The division node to visit.</param>
+        /// <returns>The formatted division expression as a string.</returns>
         public string VisitDivision(DivisionNode node)
         {
             if (_format == OutputFormat.LaTeX)
@@ -97,6 +140,11 @@ namespace MathSolver2
             }
         }
 
+        /// <summary>
+        /// Visits an exponent node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The exponent node to visit.</param>
+        /// <returns>The formatted exponent expression as a string.</returns>
         public string VisitExponent(ExponentNode node)
         {
             string baseStr = FormatWithParenthesesIfNeeded(node.Base,
@@ -112,6 +160,11 @@ namespace MathSolver2
             return $"{baseStr}^{exponentStr}";
         }
 
+        /// <summary>
+        /// Visits a parenthesis node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The parenthesis node to visit.</param>
+        /// <returns>The formatted parenthesis expression as a string.</returns>
         public string VisitParenthesis(ParenthesisNode node)
         {
             string inner = node.Expression.Accept(this);
@@ -119,6 +172,11 @@ namespace MathSolver2
             return $"({inner})";
         }
 
+        /// <summary>
+        /// Visits a function node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The function node to visit.</param>
+        /// <returns>The formatted function expression as a string.</returns>
         public string VisitFunction(FunctionNode node)
         {
             StringBuilder sb = new StringBuilder();
@@ -141,6 +199,11 @@ namespace MathSolver2
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Visits a factorial node and formats it as a string.
+        /// </summary>
+        /// <param name="node">The factorial node to visit.</param>
+        /// <returns>The formatted factorial expression as a string.</returns>
         public string VisitFactorial(FactorialNode node)
         {
             string expr = FormatWithParenthesesIfNeeded(node.Expression,
@@ -150,8 +213,11 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Formats a node with parentheses if needed
+        /// Formats a node with parentheses if needed.
         /// </summary>
+        /// <param name="node">The node to format.</param>
+        /// <param name="needsParentheses">Whether parentheses are needed.</param>
+        /// <returns>The formatted node as a string.</returns>
         private string FormatWithParenthesesIfNeeded(IExpressionNode node, bool needsParentheses)
         {
             string formatted = node.Accept(this);
@@ -165,8 +231,11 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Determines if a node has lower precedence than its parent
+        /// Determines if a node has lower precedence than its parent.
         /// </summary>
+        /// <param name="node">The child node.</param>
+        /// <param name="parent">The parent node.</param>
+        /// <returns><c>true</c> if the child node has lower precedence; otherwise, <c>false</c>.</returns>
         private bool IsLowerPrecedence(IExpressionNode node, IExpressionNode parent)
         {
             int nodePrecedence = GetPrecedence(node);
@@ -176,8 +245,10 @@ namespace MathSolver2
         }
 
         /// <summary>
-        /// Gets the precedence level of a node
+        /// Gets the precedence level of a node.
         /// </summary>
+        /// <param name="node">The node to evaluate.</param>
+        /// <returns>The precedence level of the node.</returns>
         private int GetPrecedence(IExpressionNode node)
         {
             if (node is AdditionNode || node is SubtractionNode)

@@ -57,6 +57,8 @@
         /// <summary>
         /// Sets a variable value
         /// </summary>
+        /// <param name="name">The name of the variable</param>
+        /// <param name="value">The value of the variable</param>
         public void SetVariable(string name, decimal value)
         {
             _variables[name] = value;
@@ -65,6 +67,9 @@
         /// <summary>
         /// Gets a variable value
         /// </summary>
+        /// <param name="name">The name of the variable</param>
+        /// <returns>The value of the variable</returns>
+        /// <exception cref="ArgumentException">Thrown when the variable is not defined</exception>
         public decimal GetVariable(string name)
         {
             if (_variables.TryGetValue(name, out decimal value))
@@ -78,6 +83,9 @@
         /// <summary>
         /// Evaluates an expression and returns the result
         /// </summary>
+        /// <param name="expression">The expression to evaluate</param>
+        /// <returns>The result of the evaluation</returns>
+        /// <exception cref="ArgumentException">Thrown when there is a parse or evaluation error</exception>
         public decimal Evaluate(string expression)
         {
             try
@@ -104,6 +112,9 @@
         /// <summary>
         /// Evaluates an expression to a string
         /// </summary>
+        /// <param name="expression">The expression to evaluate</param>
+        /// <returns>The result of the evaluation as a string</returns>
+        /// <exception cref="ArgumentException">Thrown when there is a parse or evaluation error</exception>
         public string EvaluateToString(string expression)
         {
             decimal result = Evaluate(expression);
@@ -113,6 +124,9 @@
         /// <summary>
         /// Evaluates an expression step by step and returns all calculation steps with arithmetic formatting
         /// </summary>
+        /// <param name="expression">The expression to evaluate</param>
+        /// <returns>The result of the evaluation with steps</returns>
+        /// <exception cref="ArgumentException">Thrown when there is a parse or evaluation error</exception>
         public CalculationResult EvaluateWithSteps(string expression)
         {
             try
@@ -128,7 +142,7 @@
 
                 // Create the result object
                 string arithmeticMode = _arithmeticType.ToString();
-                string precisionInfo = _arithmeticType == ArithmeticType.Normal ? "Maximum" : 
+                string precisionInfo = _arithmeticType == ArithmeticType.Normal ? "Maximum" :
                     _useSignificantDigits ?
                         $"{_precision} significant digits" :
                         $"{_precision} decimal places";
@@ -157,6 +171,10 @@
         /// <summary>
         /// Formats an expression in standard or LaTeX notation
         /// </summary>
+        /// <param name="expression">The expression to format</param>
+        /// <param name="format">The output format (Standard or LaTeX)</param>
+        /// <returns>The formatted expression</returns>
+        /// <exception cref="ArgumentException">Thrown when there is a parse error</exception>
         public string Format(string expression, OutputFormat format = OutputFormat.Standard)
         {
             try
@@ -178,6 +196,9 @@
         /// <summary>
         /// Validates if an expression can be parsed without errors
         /// </summary>
+        /// <param name="expression">The expression to validate</param>
+        /// <param name="error">The error message if validation fails</param>
+        /// <returns>True if the expression is valid, otherwise false</returns>
         public bool Validate(string expression, out string error)
         {
             try
@@ -198,6 +219,8 @@
         /// <summary>
         /// Formats a number according to the specified arithmetic settings
         /// </summary>
+        /// <param name="value">The value to format</param>
+        /// <returns>The formatted value</returns>
         private decimal FormatNumber(decimal value)
         {
             switch (_arithmeticType)
@@ -233,6 +256,10 @@
         /// <summary>
         /// Truncates a decimal value to the specified number of decimal places
         /// </summary>
+        /// <param name="value">The value to truncate</param>
+        /// <param name="decimalPlaces">The number of decimal places</param>
+        /// <returns>The truncated value</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when decimalPlaces is negative</exception>
         private decimal TruncateToDecimalPlaces(decimal value, int decimalPlaces)
         {
             if (decimalPlaces < 0)
@@ -255,6 +282,10 @@
         /// <summary>
         /// Truncates a decimal value to the specified number of significant digits
         /// </summary>
+        /// <param name="value">The value to truncate</param>
+        /// <param name="sigDigits">The number of significant digits</param>
+        /// <returns>The truncated value</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when sigDigits is not positive</exception>
         private decimal TruncateToSignificantDigits(decimal value, int sigDigits)
         {
             if (sigDigits <= 0)
@@ -285,6 +316,10 @@
         /// <summary>
         /// Rounds a decimal value to the specified number of significant digits
         /// </summary>
+        /// <param name="value">The value to round</param>
+        /// <param name="sigDigits">The number of significant digits</param>
+        /// <returns>The rounded value</returns>
+        /// <exception cref="ArgumentOutOfRangeException">Thrown when sigDigits is not positive</exception>
         private decimal RoundToSignificantDigits(decimal value, int sigDigits)
         {
             if (sigDigits <= 0)

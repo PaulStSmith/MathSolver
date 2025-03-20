@@ -1,175 +1,64 @@
 ﻿namespace MathSolver2
 {
     /// <summary>
-    /// Evaluates an expression tree step by step with arithmetic formatting and records each calculation
+    /// Evaluates an expression tree step by step with arithmetic formatting and records each calculation.
     /// </summary>
-    public class StepByStepArithmeticVisitor : IExpressionVisitor<StepByStepResult>
+    public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResult>
     {
-        private readonly Dictionary<string, decimal> _variables;
         private readonly FormattingVisitor _formatter;
-        private readonly ArithmeticType _arithmeticType;
-        private readonly int _precision;
-        private readonly bool _useSignificantDigits;
 
         /// <summary>
-        /// Creates a new step-by-step arithmetic visitor with the specified settings
+        /// Creates a new step-by-step arithmetic visitor with the specified settings.
         /// </summary>
+        /// <param name="variables">A dictionary of variable names and their values.</param>
+        /// <param name="arithmeticType">The type of arithmetic to use (e.g., standard or scientific).</param>
+        /// <param name="precision">The number of decimal places to use in calculations.</param>
+        /// <param name="useSignificantDigits">Whether to use significant digits for formatting.</param>
         public StepByStepArithmeticVisitor(
             Dictionary<string, decimal> variables,
             ArithmeticType arithmeticType,
             int precision,
-            bool useSignificantDigits)
+            bool useSignificantDigits) : base(variables, arithmeticType, precision, useSignificantDigits)
         {
-            _variables = variables ?? new Dictionary<string, decimal>();
             _formatter = new FormattingVisitor();
-            _arithmeticType = arithmeticType;
-            _precision = precision;
-            _useSignificantDigits = useSignificantDigits;
-        }
-
-        /// <summary>
-        /// Sets a variable value
-        /// </summary>
-        public void SetVariable(string name, decimal value)
-        {
-            _variables[name] = value;
-        }
-
-        /// <summary>
-        /// Evaluates the expression step by step and records calculations
-        /// </summary>
-        public StepByStepResult Evaluate(IExpressionNode node)
-        {
-            return node.Accept(this);
-        }
-
-        /// <summary>
-        /// Formats a number according to the specified arithmetic settings
-        /// </summary>
-        private decimal FormatNumber(decimal value)
-        {
-            switch (_arithmeticType)
-            {
-                case ArithmeticType.Normal:
-                    return value;
-
-                case ArithmeticType.Truncate:
-                    if (_useSignificantDigits)
-                    {
-                        return TruncateToSignificantDigits(value, _precision);
-                    }
-                    else
-                    {
-                        return TruncateToDecimalPlaces(value, _precision);
-                    }
-
-                case ArithmeticType.Round:
-                    if (_useSignificantDigits)
-                    {
-                        return RoundToSignificantDigits(value, _precision);
-                    }
-                    else
-                    {
-                        return Math.Round(value, _precision);
-                    }
-
-                default:
-                    return value;
-            }
-        }
-
-        /// <summary>
-        /// Truncates a decimal value to the specified number of decimal places
-        /// </summary>
-        private decimal TruncateToDecimalPlaces(decimal value, int decimalPlaces)
-        {
-            if (decimalPlaces < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(decimalPlaces), "Decimal places must be non-negative");
-            }
-
-            decimal multiplier = (decimal)Math.Pow(10, decimalPlaces);
-
-            if (value >= 0)
-            {
-                return Math.Floor(value * multiplier) / multiplier;
-            }
-            else
-            {
-                return Math.Ceiling(value * multiplier) / multiplier;
-            }
-        }
-
-        /// <summary>
-        /// Truncates a decimal value to the specified number of significant digits
-        /// </summary>
-        private decimal TruncateToSignificantDigits(decimal value, int sigDigits)
-        {
-            if (sigDigits <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(sigDigits), "Significant digits must be positive");
-            }
-
-            if (value == 0)
-            {
-                return 0;
-            }
-
-            // Get the exponent (power of 10) of the value
-            int exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value)));
-
-            // Calculate the number of decimal places needed
-            int decimalPlaces = sigDigits - exponent - 1;
-
-            // Adjust for small numbers (value < 1)
-            if (value != 0 && Math.Abs(value) < 1)
-            {
-                decimalPlaces = sigDigits + Math.Abs(exponent + 1);
-            }
-
-            return TruncateToDecimalPlaces(value, Math.Max(0, decimalPlaces));
-        }
-
-        /// <summary>
-        /// Rounds a decimal value to the specified number of significant digits
-        /// </summary>
-        private decimal RoundToSignificantDigits(decimal value, int sigDigits)
-        {
-            if (sigDigits <= 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(sigDigits), "Significant digits must be positive");
-            }
-
-            if (value == 0)
-            {
-                return 0;
-            }
-
-            // Get the exponent (power of 10) of the value
-            int exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value)));
-
-            // Calculate the number of decimal places needed
-            int decimalPlaces = sigDigits - exponent - 1;
-
-            // Adjust for small numbers (value < 1)
-            if (value != 0 && Math.Abs(value) < 1)
-            {
-                decimalPlaces = sigDigits + Math.Abs(exponent + 1);
-            }
-
-            return Math.Round(value, Math.Max(0, decimalPlaces));
         }
 
         #region Visitor Methods
 
-        public StepByStepResult VisitNumber(NumberNode node)
+        /// <summary>
+        /// Visits a number node and returns its value as a result.
+        /// </summary>
+        /// <param name="node">The number node to visit.</param>
+        /// <returns>A result containing the value of the number and no steps.</returns>
+        public override StepByStepResult VisitNumber(NumberNode node)
         {
             return new StepByStepResult(node.Value, new List<CalculationStep>());
         }
 
-        public StepByStepResult VisitVariable(VariableNode node)
+        /// <summary>
+        /// Visits a variable node, substitutes its value, and returns the result.
+        /// </summary>
+        /// <param name="node">The variable node to visit.</param>
+        /// <returns>A result containing the value of the variable and the substitution step.</returns>
+        /// <exception cref="EvaluationException">Thrown if the variable is not defined.</exception>
+        public override StepByStepResult VisitVariable(VariableNode node)
         {
-            if (_variables.TryGetValue(node.Name, out decimal value))
+            // First check if it's a mathematical constant
+            if (MathConstants.TryGetValue(node.Name, out decimal constValue))
+            {
+                decimal formattedConstValue = FormatNumber(constValue);
+
+                var steps = new List<CalculationStep>
+                {
+                    new CalculationStep(
+                        node.Name,
+                        $"Substitute mathematical constant {node.Name}",
+                        formattedConstValue.ToString())
+                };
+
+                return new StepByStepResult(formattedConstValue, steps);
+            }
+            if (Variables.TryGetValue(node.Name, out decimal value))
             {
                 var steps = new List<CalculationStep>
                 {
@@ -185,7 +74,12 @@
             throw new EvaluationException($"Variable '{node.Name}' is not defined", node.Position);
         }
 
-        public StepByStepResult VisitAddition(AdditionNode node)
+        /// <summary>
+        /// Visits an addition node, evaluates its operands, and returns the result.
+        /// </summary>
+        /// <param name="node">The addition node to visit.</param>
+        /// <returns>A result containing the sum and the calculation steps.</returns>
+        public override StepByStepResult VisitAddition(AdditionNode node)
         {
             var leftResult = node.Left.Accept(this);
             var rightResult = node.Right.Accept(this);
@@ -207,7 +101,12 @@
             return new StepByStepResult(formattedResult, allSteps);
         }
 
-        public StepByStepResult VisitSubtraction(SubtractionNode node)
+        /// <summary>
+        /// Visits a subtraction node, evaluates its operands, and returns the result.
+        /// </summary>
+        /// <param name="node">The subtraction node to visit.</param>
+        /// <returns>A result containing the difference and the calculation steps.</returns>
+        public override StepByStepResult VisitSubtraction(SubtractionNode node)
         {
             var leftResult = node.Left.Accept(this);
             var rightResult = node.Right.Accept(this);
@@ -229,7 +128,12 @@
             return new StepByStepResult(formattedResult, allSteps);
         }
 
-        public StepByStepResult VisitMultiplication(MultiplicationNode node)
+        /// <summary>
+        /// Visits a multiplication node, evaluates its operands, and returns the result.
+        /// </summary>
+        /// <param name="node">The multiplication node to visit.</param>
+        /// <returns>A result containing the product and the calculation steps.</returns>
+        public override StepByStepResult VisitMultiplication(MultiplicationNode node)
         {
             var leftResult = node.Left.Accept(this);
             var rightResult = node.Right.Accept(this);
@@ -251,7 +155,13 @@
             return new StepByStepResult(formattedResult, allSteps);
         }
 
-        public StepByStepResult VisitDivision(DivisionNode node)
+        /// <summary>
+        /// Visits a division node, evaluates its operands, and returns the result.
+        /// </summary>
+        /// <param name="node">The division node to visit.</param>
+        /// <returns>A result containing the quotient and the calculation steps.</returns>
+        /// <exception cref="EvaluationException">Thrown if division by zero occurs.</exception>
+        public override StepByStepResult VisitDivision(DivisionNode node)
         {
             var numeratorResult = node.Numerator.Accept(this);
             var denominatorResult = node.Denominator.Accept(this);
@@ -278,7 +188,12 @@
             return new StepByStepResult(formattedResult, allSteps);
         }
 
-        public StepByStepResult VisitExponent(ExponentNode node)
+        /// <summary>
+        /// Visits an exponent node, evaluates its base and exponent, and returns the result.
+        /// </summary>
+        /// <param name="node">The exponent node to visit.</param>
+        /// <returns>A result containing the power and the calculation steps.</returns>
+        public override StepByStepResult VisitExponent(ExponentNode node)
         {
             var baseResult = node.Base.Accept(this);
             var exponentResult = node.Exponent.Accept(this);
@@ -308,7 +223,7 @@
             else
             {
                 // Check if exponent is an integer
-                if (Math.Abs(exponentResult.Value - Math.Round(exponentResult.Value)) < Precision.Epsilon)
+                if (Math.Abs(exponentResult.Value - Math.Round(exponentResult.Value)) < MathConstants.Epsilon)
                 {
                     int intExponent = (int)Math.Round(exponentResult.Value);
                     rawResult = (decimal)Math.Pow((double)baseResult.Value, intExponent);
@@ -335,7 +250,12 @@
             return new StepByStepResult(formattedResult, allSteps);
         }
 
-        public StepByStepResult VisitParenthesis(ParenthesisNode node)
+        /// <summary>
+        /// Visits a parenthesis node, evaluates its inner expression, and returns the result.
+        /// </summary>
+        /// <param name="node">The parenthesis node to visit.</param>
+        /// <returns>A result containing the value of the inner expression and the calculation steps.</returns>
+        public override StepByStepResult VisitParenthesis(ParenthesisNode node)
         {
             var innerResult = node.Expression.Accept(this);
 
@@ -354,91 +274,46 @@
             return new StepByStepResult(innerResult.Value, allSteps);
         }
 
-        public StepByStepResult VisitFunction(FunctionNode node)
+        /// <summary>
+        /// Visits a function node, evaluates its arguments, and returns the result.
+        /// </summary>
+        /// <param name="node">The function node to visit.</param>
+        /// <returns>A result containing the function's value and the calculation steps.</returns>
+        public override StepByStepResult VisitFunction(FunctionNode node)
         {
-            // Evaluate all arguments
+            // Evaluate arguments and collect steps
             var argResults = node.Arguments.Select(arg => arg.Accept(this)).ToList();
-
-            // Collect all steps from arguments
             var allSteps = new List<CalculationStep>();
             foreach (var argResult in argResults)
             {
                 allSteps.AddRange(argResult.Steps);
             }
 
-            string functionName = node.Name.ToLower();
-            decimal rawResult;
-            string operation;
+            // Get argument values
+            decimal[] argValues = argResults.Select(r => r.Value).ToArray();
 
-            switch (functionName)
-            {
-                case "sin":
-                    CheckArgumentCount(node, 1);
-                    rawResult = (decimal)Math.Sin((double)argResults[0].Value);
-                    operation = $"Calculate sine of {argResults[0].Value}";
-                    break;
+            // Evaluate the function - getting both result and description
+            var (result, description) = EvaluateFunction(node.Name, argValues, node.Position);
 
-                case "cos":
-                    CheckArgumentCount(node, 1);
-                    rawResult = (decimal)Math.Cos((double)argResults[0].Value);
-                    operation = $"Calculate cosine of {argResults[0].Value}";
-                    break;
-
-                case "tan":
-                    CheckArgumentCount(node, 1);
-                    rawResult = (decimal)Math.Tan((double)argResults[0].Value);
-                    operation = $"Calculate tangent of {argResults[0].Value}";
-                    break;
-
-                case "sqrt":
-                    CheckArgumentCount(node, 1);
-                    decimal arg = argResults[0].Value;
-                    if (arg < 0)
-                    {
-                        throw new EvaluationException("Cannot take square root of a negative number", node.Position);
-                    }
-                    rawResult = (decimal)Math.Sqrt((double)arg);
-                    operation = $"Calculate square root of {arg}";
-                    break;
-
-                case "log":
-                    CheckArgumentCount(node, 1);
-                    if (argResults[0].Value <= 0)
-                    {
-                        throw new EvaluationException("Cannot take logarithm of a non-positive number", node.Position);
-                    }
-                    rawResult = (decimal)Math.Log10((double)argResults[0].Value);
-                    operation = $"Calculate base-10 logarithm of {argResults[0].Value}";
-                    break;
-
-                case "ln":
-                    CheckArgumentCount(node, 1);
-                    if (argResults[0].Value <= 0)
-                    {
-                        throw new EvaluationException("Cannot take natural logarithm of a non-positive number", node.Position);
-                    }
-                    rawResult = (decimal)Math.Log((double)argResults[0].Value);
-                    operation = $"Calculate natural logarithm of {argResults[0].Value}";
-                    break;
-
-                default:
-                    throw new EvaluationException($"Unsupported function: {node.Name}", node.Position);
-            }
-
-            decimal formattedResult = FormatNumber(rawResult);
-
-            string formatInfo = GetFormatInfo();
+            // Format the expression
             string expression = _formatter.Format(node);
 
+            // Add the calculation step
             allSteps.Add(new CalculationStep(
                 expression,
-                $"{operation}, {formatInfo}",
-                formattedResult.ToString()));
+                description,
+                result.ToString()));
 
-            return new StepByStepResult(formattedResult, allSteps);
+            return new StepByStepResult(result, allSteps);
         }
 
-        public StepByStepResult VisitFactorial(FactorialNode node)
+        /// <summary>
+        /// Visits a factorial node, evaluates its expression, and returns the result.
+        /// </summary>
+        /// <param name="node">The factorial node to visit.</param>
+        /// <returns>A result containing the factorial value and the calculation steps.</returns>
+        /// <exception cref="EvaluationException">Thrown if the value is not a non-negative integer.</exception>
+        public override StepByStepResult VisitFactorial(FactorialNode node)
         {
             var innerResult = node.Expression.Accept(this);
             var allSteps = new List<CalculationStep>(innerResult.Steps);
@@ -446,7 +321,7 @@
             decimal value = innerResult.Value;
 
             // Check if value is a non-negative integer
-            if (value < 0 || Math.Abs(value - Math.Round(value)) > Precision.Epsilon)
+            if (value < 0 || Math.Abs(value - Math.Round(value)) > MathConstants.Epsilon)
             {
                 throw new EvaluationException("Factorial is only defined for non-negative integers", node.Position);
             }
@@ -473,56 +348,38 @@
             return new StepByStepResult(formattedResult, allSteps);
         }
 
-        #endregion
-
-        public StepByStepResult VisitSummation(SummationNode node)
+        /// <summary>
+        /// Visits a summation node and returns the result.
+        /// </summary>
+        /// <param name="node">The summation node to visit.</param>
+        /// <returns>A result containing the summation value and the calculation steps.</returns>
+        public override StepByStepResult VisitSummation(SummationNode node)
         {
             return IteratorNodeVisitors.VisitSummation(
                 this,
                 node,
-                _variables,
+                Variables,
                 _formatter,
                 FormatNumber,
                 GetFormatInfo);
         }
 
-        public StepByStepResult VisitProduct(ProductNode node)
+        /// <summary>
+        /// Visits a product node and returns the result.
+        /// </summary>
+        /// <param name="node">The product node to visit.</param>
+        /// <returns>A result containing the product value and the calculation steps.</returns>
+        public override StepByStepResult VisitProduct(ProductNode node)
         {
             return IteratorNodeVisitors.VisitProduct(
                 this,
                 node,
-                _variables,
+                Variables,
                 _formatter,
                 FormatNumber,
                 GetFormatInfo);
         }
 
-        private void CheckArgumentCount(FunctionNode node, int expectedCount)
-        {
-            if (node.Arguments.Count != expectedCount)
-            {
-                throw new EvaluationException(
-                    $"Function {node.Name} expects {expectedCount} argument(s), got {node.Arguments.Count}",
-                    node.Position);
-            }
-        }
-
-        /// <summary>
-        /// Gets a description of the current formatting applied
-        /// </summary>
-        private string GetFormatInfo()
-        {
-            if (_arithmeticType == ArithmeticType.Normal)
-            {
-                return "with no formatting";
-            }
-
-            string action = _arithmeticType == ArithmeticType.Truncate ? "truncating" : "rounding";
-            string precision = _useSignificantDigits ?
-                $"{_precision} significant digit{(_precision > 1 ? "s" : "")}" :
-                $"{_precision} decimal place{(_precision > 1 ? "s" : "")}";
-
-            return $"{action} to {precision}";
-        }
+        #endregion
     }
 }

@@ -3,7 +3,7 @@
 namespace MathSolver
 {
     /// <summary>
-    /// Handles arithmetic operations and number formatting based on configuration settings
+    /// Handles arithmetic operations and number formatting based on configuration settings.
     /// </summary>
     public class ArithmeticHandler
     {
@@ -11,20 +11,32 @@ namespace MathSolver
         private readonly int _precision;
         private readonly bool _useSignificantDigits;
 
+        /// <summary>
+        /// Gets the type of arithmetic to use.
+        /// </summary>
         public ArithmeticType ArithmeticType => _arithmeticType;
 
+        /// <summary>
+        /// Gets the precision in decimal places or significant digits.
+        /// </summary>
         public int Precision => _precision;
 
+        /// <summary>
+        /// Gets a value indicating whether to use significant digits instead of decimal places.
+        /// </summary>
         public bool UseSignificantDigits => _useSignificantDigits;
 
+        /// <summary>
+        /// Gets a description of the precision setting.
+        /// </summary>
         public string PrecisionDescription => UseSignificantDigits ? $"{Precision} significant digits" : $"{Precision} decimal places";
 
         /// <summary>
-        /// Creates a new arithmetic handler with specified formatting settings
+        /// Creates a new arithmetic handler with specified formatting settings.
         /// </summary>
-        /// <param name="arithmeticType">Type of arithmetic to use (Normal, Truncate, Round)</param>
-        /// <param name="precision">Number of decimal places or significant digits</param>
-        /// <param name="useSignificantDigits">Whether precision refers to significant digits</param>
+        /// <param name="arithmeticType">Type of arithmetic to use (Normal, Truncate, Round).</param>
+        /// <param name="precision">Number of decimal places or significant digits.</param>
+        /// <param name="useSignificantDigits">Whether precision refers to significant digits.</param>
         public ArithmeticHandler(
             ArithmeticType arithmeticType = ArithmeticType.Normal,
             int precision = 10,
@@ -36,12 +48,14 @@ namespace MathSolver
         }
 
         /// <summary>
-        /// Performs a binary operation and formats the result according to settings
+        /// Performs a binary operation and formats the result according to settings.
         /// </summary>
-        /// <param name="a">First operand</param>
-        /// <param name="b">Second operand</param>
-        /// <param name="operation">Operator symbol</param>
-        /// <returns>Formatted result of the operation</returns>
+        /// <param name="a">First operand.</param>
+        /// <param name="b">Second operand.</param>
+        /// <param name="operation">Operator symbol.</param>
+        /// <returns>Formatted result of the operation.</returns>
+        /// <exception cref="DivideByZeroException">Thrown when attempting to divide by zero.</exception>
+        /// <exception cref="ArgumentException">Thrown when an unsupported operator is provided.</exception>
         public double PerformOperation(double a, double b, string operation)
         {
             double result;
@@ -75,10 +89,11 @@ namespace MathSolver
         }
 
         /// <summary>
-        /// Calculates factorial of an integer
+        /// Calculates the factorial of an integer.
         /// </summary>
-        /// <param name="n">The number to calculate factorial for</param>
-        /// <returns>The factorial result</returns>
+        /// <param name="n">The number to calculate factorial for.</param>
+        /// <returns>The factorial result.</returns>
+        /// <exception cref="ArgumentException">Thrown when the input is a negative number.</exception>
         public double Factorial(int n)
         {
             if (n < 0)
@@ -101,10 +116,10 @@ namespace MathSolver
         }
 
         /// <summary>
-        /// Formats a number according to the configured arithmetic settings
+        /// Formats a number according to the configured arithmetic settings.
         /// </summary>
-        /// <param name="value">The number to format</param>
-        /// <returns>The formatted number</returns>
+        /// <param name="value">The number to format.</param>
+        /// <returns>The formatted number.</returns>
         public double FormatNumber(double value)
         {
             if (double.IsNaN(value) || double.IsInfinity(value))
@@ -134,10 +149,10 @@ namespace MathSolver
         }
 
         /// <summary>
-        /// Formats a number as a string with appropriate representation
+        /// Formats a number as a string with appropriate representation.
         /// </summary>
-        /// <param name="value">The number to format</param>
-        /// <returns>String representation of the number</returns>
+        /// <param name="value">The number to format.</param>
+        /// <returns>String representation of the number.</returns>
         public string FormatNumberAsString(double value)
         {
             if (double.IsNaN(value))
@@ -164,11 +179,11 @@ namespace MathSolver
         }
 
         /// <summary>
-        /// Truncates a number to a specific number of decimal places
+        /// Truncates a number to a specific number of decimal places.
         /// </summary>
-        /// <param name="value">The number to truncate</param>
-        /// <param name="decimalPlaces">Number of decimal places to keep</param>
-        /// <returns>The truncated number</returns>
+        /// <param name="value">The number to truncate.</param>
+        /// <param name="decimalPlaces">Number of decimal places to keep.</param>
+        /// <returns>The truncated number.</returns>
         private double TruncateToDecimalPlaces(double value, int decimalPlaces)
         {
             double multiplier = Math.Pow(10, decimalPlaces);
@@ -176,11 +191,11 @@ namespace MathSolver
         }
 
         /// <summary>
-        /// Truncates a number to a specific number of significant digits
+        /// Truncates a number to a specific number of significant digits.
         /// </summary>
-        /// <param name="value">The number to truncate</param>
-        /// <param name="sigDigits">Number of significant digits to keep</param>
-        /// <returns>The truncated number</returns>
+        /// <param name="value">The number to truncate.</param>
+        /// <param name="sigDigits">Number of significant digits to keep.</param>
+        /// <returns>The truncated number.</returns>
         private double TruncateToSignificantDigits(double value, int sigDigits)
         {
             if (Math.Abs(value) < double.Epsilon)
@@ -202,11 +217,11 @@ namespace MathSolver
         }
 
         /// <summary>
-        /// Rounds a number to a specific number of significant digits
+        /// Rounds a number to a specific number of significant digits.
         /// </summary>
-        /// <param name="value">The number to round</param>
-        /// <param name="sigDigits">Number of significant digits to keep</param>
-        /// <returns>The rounded number</returns>
+        /// <param name="value">The number to round.</param>
+        /// <param name="sigDigits">Number of significant digits to keep.</param>
+        /// <returns>The rounded number.</returns>
         private double RoundToSignificantDigits(double value, int sigDigits)
         {
             if (Math.Abs(value) < double.Epsilon)
