@@ -67,6 +67,80 @@ static void new_line(void) {
     os_NewLine();
 }
 
+static void print_string(const char* str) {
+    os_PutStrFull(str);
+    new_line();
+}
+
+/**
+ * Centers a string on the screen.
+ * 
+ * @param text The string to center.
+ */
+static void print_centered(const char* str) {
+    int len = strlen(str);
+    int padding = (SCREEN_COLS - len) / 2;
+    print_format("%*s%s", padding, "", str);
+}
+
+/**
+ * Prints a string truncated to fit within the specified maximum length.
+ * 
+ * @param text The string to print.
+ * @param max_length The maximum length of the string to display.
+ */
+static void print_truncated(const char* str, int max_length) {
+    char buffer[SCREEN_COLS + 1];
+    
+    if (max_length > SCREEN_COLS) {
+        max_length = SCREEN_COLS;
+    }
+    
+    if ((int)strlen(str) <= max_length) {
+        strncpy(buffer, str, max_length);
+        buffer[max_length] = '\0';
+        os_PutStrFull(buffer);
+    } else {
+        // Truncate with ellipsis
+        strncpy(buffer, str, max_length - 3);
+        buffer[max_length - 3] = '.';
+        buffer[max_length - 2] = '.';
+        buffer[max_length - 1] = '.';
+        buffer[max_length] = '\0';
+        os_PutStrFull(buffer);
+    }
+}
+
+static void print_format(const char* format, ...) {
+    char buffer[255];
+    va_list args;
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    va_end(args);
+    
+    print_string(buffer);
+}
+
+static void print_format_centered(const char* format, ...) {
+    char buffer[255];
+    va_list args;
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    va_end(args);
+    
+    print_centered(buffer);
+}
+
+static void print_format_truncated(int max_length, const char* format, ...) {
+    char buffer[255];
+    va_list args;
+    va_start(args, max_length);
+    vsprintf(buffer, format, args);
+    va_end(args);
+    
+    print_truncated(buffer, max_length);
+}
+
 /**
  * Draws a horizontal line across the screen using the specified character.
  * 
@@ -81,67 +155,7 @@ static void draw_horizontal_line(char line_char) {
     }
     line[SCREEN_COLS] = '\0';
     
-    os_PutStrFull(line);
-    new_line();
-}
-
-/**
- * Centers a string on the screen.
- * 
- * @param text The string to center.
- */
-static void print_centered(const char* text) {
-    int text_len = strlen(text);
-    if (text_len > SCREEN_COLS) {
-        os_PutStrFull(text);
-        new_line();
-        return;
-    }
-    
-    int padding = (SCREEN_COLS - text_len) / 2;
-    
-    // Create a padded string
-    char padded[SCREEN_COLS + 1];
-    
-    // Fill with spaces
-    memset(padded, ' ', SCREEN_COLS);
-    padded[SCREEN_COLS] = '\0';
-    
-    // Copy the text to the center
-    if (text_len > 0) {
-        memcpy(padded + padding, text, text_len);
-    }
-    
-    os_PutStrFull(padded);
-    new_line();
-}
-
-/**
- * Prints a string truncated to fit within the specified maximum length.
- * 
- * @param text The string to print.
- * @param max_length The maximum length of the string to display.
- */
-static void print_truncated(const char* text, int max_length) {
-    char buffer[SCREEN_COLS + 1];
-    
-    if (max_length > SCREEN_COLS) {
-        max_length = SCREEN_COLS;
-    }
-    
-    if ((int)strlen(text) <= max_length) {
-        strncpy(buffer, text, max_length);
-        buffer[max_length] = '\0';
-        os_PutStrFull(buffer);
-    } else {
-        // Truncate with ellipsis
-        strncpy(buffer, text, max_length - 3);
-        buffer[max_length - 3] = '.';
-        buffer[max_length - 2] = '.';
-        buffer[max_length - 1] = '.';
-        buffer[max_length] = '\0';
-        os_PutStrFull(buffer);
-    }
+    print_string(line);
 }
 
 /* ============================== UI Drawing Functions ============================== */
@@ -161,26 +175,23 @@ void draw_header(void) {
 void show_input_prompt(void) {
     draw_header();
     
-    os_PutStrFull("Enter expression:");
-    new_line();
+    print_string("Enter expression:");
     
     // Show the current arithmetic mode and precision
-    char mode_str[SCREEN_COLS];
-    char prec_str[SCREEN_COLS];
     ArithmeticType mode = get_arithmetic_mode();
-    int precision = get_precision();
+    int precision       = get_precision();
     bool use_sig_digits = get_use_significant_digits();
     
-    sprintf(mode_str, "Mode: %s", 
-            mode == ARITHMETIC_NORMAL ? "Normal" : 
-            mode == ARITHMETIC_TRUNCATE ? "Truncate" : "Round");
-    sprintf(prec_str, "Prec: %d %s", 
-            precision,
-            use_sig_digits ? "sig" : "dec");
+    print_format("Mode: %s", 
+                    mode == ARITHMETIC_NORMAL ? "Normal" : 
+                    mode == ARITHMETIC_TRUNCATE ? "Truncate" : "Round");
     
-    os_PutStrFull(mode_str);
-    new_line();
-    os_PutStrFull(prec_str);
+    if (mode == ARITHMETIC_NORMAL)
+        print_string("Prec: Default");
+    else
+        print_format("Prec: %d %s", 
+                precision,
+                use_sig_digits ? "sig" : "dec");
 }
 
 /**
@@ -192,28 +203,16 @@ void show_calculation_result(CalculationResult* result) {
     draw_header();
     
     // Show the expression and result
-    os_PutStrFull("Expr: ");
-    print_truncated(current_expression, SCREEN_COLS - 6);
-    new_line();
+    print_format_truncated(SCREEN_COLS, "Expr: %s", current_expression);
     
-    os_PutStrFull("Ans: ");
-    // Ensure the result is properly formatted
-    char result_buffer[32];
-    strncpy(result_buffer, result->formatted_result, 31);
-    result_buffer[31] = '\0';
-    os_PutStrFull(result_buffer);
-    new_line();
+    print_format("Ans: %s", result->formatted_result);
     
     draw_horizontal_line('-');
     
     // Only proceed with steps if we have any
-    if (result->step_count > 0) {
+    if (result->step_count > 1) {
         // Show calculation steps heading
-        char step_heading[SCREEN_COLS + 1];
-        sprintf(step_heading, "Steps (%d):", result->step_count);
-        step_heading[SCREEN_COLS] = '\0';
-        os_PutStrFull(step_heading);
-        new_line();
+        print_format("Steps (%d):", result->step_count);
         
         // Calculate how many steps we can display
         int visible_steps = 1; // Just show one at a time to keep it simple
@@ -228,23 +227,16 @@ void show_calculation_result(CalculationResult* result) {
         
         // Display the current step
         if (step_scroll_position < result->step_count) {
-            char step_buffer[16];
-            sprintf(step_buffer, "%d. ", step_scroll_position + 1);
-            step_buffer[15] = '\0';
-            os_PutStrFull(step_buffer);
+            print_format("%d. ", step_scroll_position + 1);
             
             // Show a simplified step
-            char step_text[SCREEN_COLS + 1];
-            strncpy(step_text, result->steps[step_scroll_position].expression, SCREEN_COLS - 10);
-            step_text[SCREEN_COLS - 10] = '\0';
-            os_PutStrFull(step_text);
-            new_line();
+            print_format_truncated(SCREEN_COLS, "%s", result->steps[step_scroll_position].expression);
         }
     }
     
     // Navigation hints
     new_line();
-    os_PutStrFull("[MODE]:Input [CLEAR]:Exit");
+    print_string("[MODE]:Input [CLEAR]:Exit");
 }
 
 /**
@@ -452,24 +444,31 @@ void run_calculator_ui(void) {
             case STATE_RESULT:
                 show_calculation_result(&current_result);
                 
-                // Handle key input for navigation
-                kb_Scan();
-                
-                if (kb_Data[6] & kb_Clear) {
-                    // CLEAR key - exit
-                    running = false;
-                } else if (kb_Data[1] & kb_Mode) {
-                    // MODE key - go back to input
-                    current_state = STATE_INPUT;
-                } else if (kb_Data[3] & kb_Up) {
-                    // Up key - scroll steps up
-                    if (step_scroll_position > 0) {
-                        step_scroll_position--;
-                    }
-                } else if (kb_Data[3] & kb_Down) {
-                    // Down key - scroll steps down
-                    if (step_scroll_position < current_result.step_count - 1) {
-                        step_scroll_position++;
+                while (true)
+                {
+                    // Handle key input for navigation
+                    kb_Scan();
+                    
+                    if (kb_Data[6] & kb_Clear) {
+                        // CLEAR key - exit
+                        running = false;
+                        break;
+                    } else if (kb_Data[1] & kb_Mode) {
+                        // MODE key - go back to input
+                        current_state = STATE_INPUT;
+                        break;
+                    } else if (kb_Data[3] & kb_Up) {
+                        // Up key - scroll steps up
+                        if (step_scroll_position > 0) {
+                            step_scroll_position--;
+                        }
+                        break;
+                    } else if (kb_Data[3] & kb_Down) {
+                        // Down key - scroll steps down
+                        if (step_scroll_position < current_result.step_count - 1) {
+                            step_scroll_position++;
+                        }
+                        break;
                     }
                 }
                 
