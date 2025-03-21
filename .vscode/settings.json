@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "mathsolver.h": "c",
+        "mathsolver_private.h": "c",
+        "arithmetic_public.h": "c"
+    }
+}

@@ -31,6 +31,15 @@ if (-not $PrivateOutputFile) {
 # Read the source file
 $sourceContent = Get-Content -Path $SourceFile -Raw
 
+# Check if the output files exist and delete them
+if (Test-Path -Path $OutputFile) {
+    Remove-Item -Path $OutputFile -Force
+}
+
+if (Test-Path -Path $PrivateOutputFile) {
+    Remove-Item -Path $PrivateOutputFile -Force
+}
+
 # Extract the filename without extension for the include guard
 $publicGuard = [System.IO.Path]::GetFileNameWithoutExtension($OutputFile).ToUpper() + "_H"
 $privateGuard = [System.IO.Path]::GetFileNameWithoutExtension($PrivateOutputFile).ToUpper() + "_H"

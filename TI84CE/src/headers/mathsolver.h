@@ -220,6 +220,27 @@ typedef struct {
     bool use_significant_digits;     /**< Whether significant digits were used */
 } CalculationResult;
 
+extern ArithmeticType current_arithmetic_type;
+extern int current_precision;
+extern bool current_use_significant_digits;
+
+/**
+ * Array of variables used in expressions.
+ * Stores user-defined variables and their values.
+ */
+extern Variable variables[MAX_VARIABLES];
+
+/** Number of currently defined variables. */
+extern int variable_count;
+
+/** Index of the next available node in the node pool. */
+extern int node_pool_index;
+
 #include "mathsolver_public.h"
+#include "arithmetic_public.h"
+#include "evaluator_public.h"
+#include "parser_public.h"
+#include "tokenizer_public.h"
+#include "variables_public.h"
 
 #endif /* MATHSOLVER_H */

@@ -39,7 +39,7 @@
      
      if (handle) {
         // Write initial message
-        const char *init_msg = "MathSolver Debug Log\n";
+        const char *init_msg = "\nMathSolver Debug Log\n";
         ti_Write(init_msg, 1, strlen(init_msg), handle);
         ti_Close(handle);
         ti_SetArchiveStatus(true, handle);
