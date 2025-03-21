@@ -80,7 +80,9 @@ typedef enum {
     TOKEN_COMMA,        /**< Comma separator */
     TOKEN_FACTORIAL,    /**< Factorial operator */
     TOKEN_FUNCTION,     /**< Function token */
-    TOKEN_END           /**< End of input */
+    TOKEN_END,          /**< End of input */
+    TOKEN_PI,           /**< Pi constant */
+    TOKEN_PHI           /**< Phi constant */
 } TokenType;
 
 /**
@@ -218,6 +220,6 @@ typedef struct {
     bool use_significant_digits;     /**< Whether significant digits were used */
 } CalculationResult;
 
-#include "mathsolver_functions.h"
+#include "mathsolver_public.h"
 
 #endif /* MATHSOLVER_H */

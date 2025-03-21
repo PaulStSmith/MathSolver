@@ -11,7 +11,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "headers/log.h"
 #include "headers/mathsolver.h"
+#include "headers/mathsolver_private.h"
 
 /* ============================== Global Variables ============================== */
 
@@ -55,6 +57,8 @@ void mathsolver_init(void) {
     // Reset variables
     variable_count = 0;
     memset(variables, 0, sizeof(variables));
+
+    log_debug("MathSolver initialized");
 }
 
 /**
@@ -67,6 +71,8 @@ void mathsolver_cleanup(void) {
     
     // Reset variables
     variable_count = 0;
+
+    log_debug("MathSolver cleaned up");
 }
 
 /* ============================== Tokenization Implementation ============================== */
@@ -111,6 +117,9 @@ void tokenizer_init(Tokenizer* tokenizer, const char* input) {
     tokenizer->position = 0;
     tokenizer->line = 1;
     tokenizer->column = 1;
+
+    log_debug("Tokenizer initialized");
+    log_message("Input string: %s", input);
     
     // Initialize with the first token
     tokenizer->current_token = get_next_token(tokenizer);
@@ -136,6 +145,8 @@ Token get_next_token(Tokenizer* tokenizer) {
         token.position.end = tokenizer->position;
         token.position.line = tokenizer->line;
         token.position.column = tokenizer->column;
+
+        log_debug("End of input reached");
         return token;
     }
     
@@ -169,6 +180,7 @@ Token get_next_token(Tokenizer* tokenizer) {
         token.value[i] = '\0';
         token.type = TOKEN_NUMBER;
         token.position.end = tokenizer->position - 1;
+        log_token("num.", token.type, token.value);
         return token;
     }
     
@@ -187,8 +199,12 @@ Token get_next_token(Tokenizer* tokenizer) {
                (tokenizer->input[tokenizer->position] >= '0' && 
                 tokenizer->input[tokenizer->position] <= '9') ||
                tokenizer->input[tokenizer->position] == '_') {
-            
-            token.value[i++] = tokenizer->input[tokenizer->position];
+
+            /* lowercase the character */
+            char temp = tokenizer->input[tokenizer->position];
+            temp = (temp >= 'A' && temp <= 'Z') ? temp + 32 : temp;
+            token.value[i++] = temp;
+
             advance_position(tokenizer);
             
             // Prevent buffer overflow
@@ -197,8 +213,12 @@ Token get_next_token(Tokenizer* tokenizer) {
         
         token.value[i] = '\0';
         
-        // Check if this is a function name
-        if (strcmp(token.value, "sin") == 0 ||
+        // Check if this is a mathematical constant or function
+        if (strcmp(token.value, "pi") == 0) {
+            token.type = TOKEN_PI;
+        } else if (strcmp(token.value, "phi") == 0) {
+            token.type = TOKEN_PHI;
+        } else if (strcmp(token.value, "sin") == 0 ||
             strcmp(token.value, "cos") == 0 ||
             strcmp(token.value, "tan") == 0 ||
             strcmp(token.value, "log") == 0 ||
@@ -206,10 +226,12 @@ Token get_next_token(Tokenizer* tokenizer) {
             strcmp(token.value, "sqrt") == 0) {
             token.type = TOKEN_FUNCTION;
         } else {
+            // if not consider it a variable
             token.type = TOKEN_VARIABLE;
         }
         
         token.position.end = tokenizer->position - 1;
+        log_token("func", token.type, token.value);
         return token;
     }
     
@@ -229,8 +251,12 @@ Token get_next_token(Tokenizer* tokenizer) {
         case ')': token.type = TOKEN_RIGHT_PAREN; break;
         case ',': token.type = TOKEN_COMMA; break;
         case '!': token.type = TOKEN_FACTORIAL; break;
+        case (char)0xC4: token.type = TOKEN_PI; break;
+        case (char)0xD1: token.type = TOKEN_PHI; break;
         default:  token.type = TOKEN_NONE; break;
     }
+
+    log_char_token("char", token.type, current);
     
     return token;
 }
@@ -370,21 +396,6 @@ static ExpressionNode* create_parenthesis_node(ExpressionNode* expression, Sourc
 /* ============================== Parser Implementation ============================== */
 
 /**
- * Matches the current token type and advances to the next token.
- * 
- * @param tokenizer Pointer to the tokenizer.
- * @param type The expected token type.
- * @return True if the current token matches the expected type, false otherwise.
- */
-static bool match_and_consume(Tokenizer* tokenizer, TokenType type) {
-    if (tokenizer->current_token.type == type) {
-        tokenizer->current_token = get_next_token(tokenizer);
-        return true;
-    }
-    return false;
-}
-
-/**
  * Expects a specific token type and advances, or reports an error.
  * 
  * @param tokenizer Pointer to the tokenizer.
@@ -408,13 +419,22 @@ static bool expect(Tokenizer* tokenizer, TokenType type) {
 ExpressionNode* parse_expression_string(const char* input) {
     // Reset node pool
     node_pool_index = 0;
+
+    log_debug("Parsing expression string");
+    log_message("Expression input: %s", input);
     
     // Initialize tokenizer
     Tokenizer tokenizer;
     tokenizer_init(&tokenizer, input);
     
     // Parse the expression
-    return parse_expression(&tokenizer);
+    ExpressionNode* root = parse_expression(&tokenizer);
+    if (root == NULL) {
+        log_error("Failed to parse expression");
+    } else {
+        log_debug("Expression parsed successfully");
+    }
+    return root;
 }
 
 /**
@@ -518,7 +538,7 @@ static ExpressionNode* parse_factor(Tokenizer* tokenizer) {
 static ExpressionNode* parse_primary(Tokenizer* tokenizer) {
     Token token = tokenizer->current_token;
     
-    switch (token.type) {
+    switch ((int)token.type) {
         case TOKEN_NUMBER: {
             // Consume the token
             tokenizer->current_token = get_next_token(tokenizer);
@@ -527,6 +547,20 @@ static ExpressionNode* parse_primary(Tokenizer* tokenizer) {
             double value = atof(token.value);
             
             return create_number_node(value, token.position);
+        }
+
+        case TOKEN_PI: {
+            // Consume the token
+            tokenizer->current_token = get_next_token(tokenizer);
+            
+            return create_number_node(PI, token.position);
+        }
+
+        case TOKEN_PHI: {
+            // Consume the token
+            tokenizer->current_token = get_next_token(tokenizer);
+            
+            return create_number_node(PHI, token.position);
         }
         
         case TOKEN_VARIABLE: {
@@ -642,6 +676,7 @@ void set_variable(const char* name, double value) {
         if (strcmp(variables[i].name, name) == 0) {
             variables[i].value = value;
             variables[i].is_defined = true;
+            log_variable(name, value);
             return;
         }
     }
@@ -653,6 +688,7 @@ void set_variable(const char* name, double value) {
         variables[variable_count].value = value;
         variables[variable_count].is_defined = true;
         variable_count++;
+        log_variable(name, value);
     }
 }
 
@@ -675,15 +711,24 @@ double get_variable(const char* name, bool* found) {
             return PHI;
     }
     
+    // Special case: Check for the π character (ASCII 196)
+    if (name[0] == (char)0xC4 && name[1] == '\0') {
+        *found = true;
+        return PI;
+    }
+
     // Check user-defined variables
     for (int i = 0; i < variable_count; i++) {
         if (strcmp(variables[i].name, name) == 0 && variables[i].is_defined) {
             *found = true;
-            return variables[i].value;
+            double value = variables[i].value;
+            log_variable(name, value);
+            return value;
         }
     }
     
     *found = false;
+    log_error("Variable not found");
     return 0.0;
 }
 
@@ -900,16 +945,30 @@ double apply_arithmetic_format(double value) {
  * @param buffer The buffer to store the formatted string.
  */
 void format_number(double value, char* buffer) {
-    // Format the number according to the current arithmetic settings
-    double formatted_value = apply_arithmetic_format(value);
+    // Format the number directly without using sprintf
+    int integer_part = (int)value;
     
-    // Convert to string with appropriate precision
-    if (current_arithmetic_type == ARITHMETIC_NORMAL) {
-        // Use default formatting
-        sprintf(buffer, "%.10g", formatted_value);
+    if (value == (double)integer_part) {
+        // It's an integer, format it without decimal
+        snprintf(buffer, MAX_TOKEN_LENGTH, "%d", integer_part);
     } else {
-        // Use precision-specific formatting
-        sprintf(buffer, "%.*g", current_precision, formatted_value);
+        // It has decimal places
+        if (current_arithmetic_type == ARITHMETIC_NORMAL) {
+            snprintf(buffer, MAX_TOKEN_LENGTH, "%.4f", value);
+        } else {
+            snprintf(buffer, MAX_TOKEN_LENGTH, "%.*f", current_precision, value);
+        }
+        
+        // Remove trailing zeros
+        int len = strlen(buffer);
+        if (strchr(buffer, '.') != NULL) {
+            while (len > 0 && buffer[len-1] == '0') {
+                buffer[--len] = '\0';
+            }
+            if (len > 0 && buffer[len-1] == '.') {
+                buffer[--len] = '\0';
+            }
+        }
     }
 }
 
@@ -922,64 +981,78 @@ void format_number(double value, char* buffer) {
  * @return The result of the evaluation.
  */
 double evaluate_expression(ExpressionNode* node) {
-    if (node == NULL) return 0;
+    if (node == NULL) {
+        log_error("Null expression node");
+        return 0;
+    }
     
     switch (node->type) {
         case NODE_NUMBER:
+            log_message("Evaluating number: %.6f", node->number_value);
             return node->number_value;
         
         case NODE_VARIABLE: {
             bool found;
             double value = get_variable(node->variable.name, &found);
             if (!found) {
-                // Handle undefined variable
-                // In a real implementation, we would report an error
-                return 0;
+                log_error("Undefined variable");
+            } else {
+                log_message("Variable evaluated: %s = %.6f", node->variable.name, value);
             }
             return value;
         }
         
-        case NODE_ADDITION:
-            return apply_arithmetic_format(
-                evaluate_expression(node->binary_op.left) + 
-                evaluate_expression(node->binary_op.right)
-            );
-        
-        case NODE_SUBTRACTION:
-            return apply_arithmetic_format(
-                evaluate_expression(node->binary_op.left) - 
-                evaluate_expression(node->binary_op.right)
-            );
-        
-        case NODE_MULTIPLICATION:
-            return apply_arithmetic_format(
-                evaluate_expression(node->binary_op.left) * 
-                evaluate_expression(node->binary_op.right)
-            );
-        
-        case NODE_DIVISION: {
-            double denominator = evaluate_expression(node->binary_op.right);
-            if (fabs(denominator) < EPSILON) {
-                // Handle division by zero
-                // In a real implementation, we would report an error
-                return 0;
-            }
-            return apply_arithmetic_format(
-                evaluate_expression(node->binary_op.left) / denominator
-            );
+        case NODE_ADDITION: {
+            double left = evaluate_expression(node->binary_op.left);
+            double right = evaluate_expression(node->binary_op.right);
+            double result = apply_arithmetic_format(left + right);
+            log_operation("Addition", result);
+            return result;
         }
         
-        case NODE_EXPONENT:
-            return apply_arithmetic_format(
-                pow(evaluate_expression(node->binary_op.left), 
-                    evaluate_expression(node->binary_op.right))
-            );
+        case NODE_SUBTRACTION: {
+            double left = evaluate_expression(node->binary_op.left);
+            double right = evaluate_expression(node->binary_op.right);
+            double result = apply_arithmetic_format(left - right);
+            log_operation("Subtraction", result);
+            return result;
+        }
+        
+        case NODE_MULTIPLICATION: {
+            double left = evaluate_expression(node->binary_op.left);
+            double right = evaluate_expression(node->binary_op.right);
+            double result = apply_arithmetic_format(left * right);
+            log_operation("Multiplication", result);
+            return result;
+        }
+        
+        case NODE_DIVISION: {
+            double left = evaluate_expression(node->binary_op.left);
+            double right = evaluate_expression(node->binary_op.right);
+            if (fabs(right) < EPSILON) {
+                log_error("Division by zero");
+                return 0;
+            }
+            double result = apply_arithmetic_format(left / right);
+            log_operation("Division", result);
+            return result;
+        }
+        
+        case NODE_EXPONENT: {
+            double left = evaluate_expression(node->binary_op.left);
+            double right = evaluate_expression(node->binary_op.right);
+            double result = apply_arithmetic_format(pow(left, right));
+            log_operation("Exponentiation", result);
+            return result;
+        }
         
         case NODE_FUNCTION: {
             double argument = evaluate_expression(node->function.argument);
-            return apply_arithmetic_format(
+            double result = apply_arithmetic_format(
                 evaluate_function(node->function.func_type, argument)
             );
+            log_operation(get_function_name(node->function.func_type), result);
+            return result;
         }
         
         case NODE_FACTORIAL: {
@@ -999,14 +1072,16 @@ double evaluate_expression(ExpressionNode* node) {
                 result *= i;
             }
             
-            return apply_arithmetic_format(result);
+            result = apply_arithmetic_format(result);
+            log_operation("Factorial", result);
+            return result;
         }
         
         case NODE_PARENTHESIS:
             return evaluate_expression(node->parenthesis.expression);
         
         default:
-            // Should never happen
+            log_error("Unknown node type");
             return 0;
     }
 }

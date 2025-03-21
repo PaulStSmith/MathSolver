@@ -26,6 +26,6 @@
 /** Number of frames between cursor blinks for visual feedback. */
 #define CURSOR_BLINK_RATE    10
 
-#include "ui_functions.h"
+#include "ui_public.h"
 
 #endif /* UI_H */

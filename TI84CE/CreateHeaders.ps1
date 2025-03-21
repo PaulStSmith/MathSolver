@@ -1,25 +1,39 @@
 # Generate-Header.ps1
 # Script to automatically generate C header files from C implementation files
+# This version creates both public and private header files
 
 param(
     [Parameter(Mandatory=$true)]
     [string]$SourceFile,
     
     [Parameter(Mandatory=$false)]
-    [string]$OutputFile = $null
+    [string]$OutputFile = $null,
+    
+    [Parameter(Mandatory=$false)]
+    [string]$PrivateOutputFile = $null
 )
 
-# If no output file is specified, use the source filename with .h extension
+# If no output files are specified, use the source filename with .h and _private.h extensions
+# Determine the directory of the source file
+$sourceDir = [System.IO.Path]::GetDirectoryName($SourceFile)
+$headersDir = Join-Path $sourceDir "headers"
+
 if (-not $OutputFile) {
-    $OutputFile = [System.IO.Path]::ChangeExtension($SourceFile, ".h")
+    $fileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($SourceFile)
+    $OutputFile = Join-Path $headersDir "$($fileBaseName)_public.h"
+}
+
+if (-not $PrivateOutputFile) {
+    $fileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($SourceFile)
+    $PrivateOutputFile = Join-Path $headersDir "$($fileBaseName)_private.h"
 }
 
 # Read the source file
 $sourceContent = Get-Content -Path $SourceFile -Raw
 
 # Extract the filename without extension for the include guard
-$fileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($OutputFile)
-$includeGuard = $fileBaseName.ToUpper() + "_H"
+$publicGuard = [System.IO.Path]::GetFileNameWithoutExtension($OutputFile).ToUpper() + "_H"
+$privateGuard = [System.IO.Path]::GetFileNameWithoutExtension($PrivateOutputFile).ToUpper() + "_H"
 
 # First, strip comments to avoid false positives
 $noComments = $sourceContent
@@ -39,23 +53,47 @@ foreach ($line in $lines) {
 }
 $preprocessed = $preprocessedLines -join "`n"
 
-# Improved regex for function definitions that handles pointers correctly
-# This pattern captures:
-# 1. Return type, which may include pointers (*) and type qualifiers
-# 2. Function name (identifier)
-# 3. Parameter list, which may contain complex types
-# 4. Followed by opening brace (either on same line or next line)
-$functionPattern = '(?<!\bif|\bwhile|\bfor|\bswitch|\belse|\bdo)' + 
-                  '(\b\w+(?:\s+\w+)*(?:\s*\*+\s*|\s+))' +  # Return type with possible pointers
-                  '(\w+)\s*\(' +                            # Function name
-                  '([\s\w,.*[\]\(\)]*?)' +                 # Parameter list
-                  '\)\s*(?:{|[\r\n]\s*{)'                   # Opening brace
+# Improved regex for static function definitions
+$staticFunctionPattern = '(?<!\bif|\bwhile|\bfor|\bswitch|\belse|\bdo)' + 
+                         '\bstatic\s+' +                                 # static keyword
+                         '(\b\w+(?:\s+\w+)*(?:\s*\*+\s*|\s+))' +         # Return type with possible pointers
+                         '(\w+)\s*\(' +                                  # Function name
+                         '([\s\w,.*[\]\(\)]*?)' +                        # Parameter list
+                         '\)\s*(?:{|[\r\n]\s*{)'                         # Opening brace
 
-$blocks = [regex]::Matches($preprocessed, $functionPattern)
+# Regex for public function definitions (not marked static)
+$publicFunctionPattern = '(?<!\bif|\bwhile|\bfor|\bswitch|\belse|\bdo)' + 
+                         '(?<!static\s+)' +                               # Not preceded by static
+                         '(\b\w+(?:\s+\w+)*(?:\s*\*+\s*|\s+))' +          # Return type with possible pointers
+                         '(\w+)\s*\(' +                                   # Function name
+                         '([\s\w,.*[\]\(\)]*?)' +                         # Parameter list
+                         '\)\s*(?:{|[\r\n]\s*{)'                          # Opening brace
 
-$functionPrototypes = @()
+# Match static and public functions
+$staticBlocks = [regex]::Matches($preprocessed, $staticFunctionPattern)
+$publicBlocks = [regex]::Matches($preprocessed, $publicFunctionPattern)
 
-foreach ($block in $blocks) {
+$staticPrototypes = @()
+$publicPrototypes = @()
+
+# Process static functions
+foreach ($block in $staticBlocks) {
+    $returnType = $block.Groups[1].Value.Trim()
+    $functionName = $block.Groups[2].Value.Trim()
+    $parameters = $block.Groups[3].Value.Trim()
+    
+    # Skip functions with empty names (likely false positives)
+    if ([string]::IsNullOrWhiteSpace($functionName)) {
+        continue
+    }
+    
+    # Format the prototype, preserving pointer spacing as in original
+    $prototype = "static $returnType $functionName($parameters);"
+    $staticPrototypes += $prototype
+}
+
+# Process public functions
+foreach ($block in $publicBlocks) {
     $returnType = $block.Groups[1].Value.Trim()
     $functionName = $block.Groups[2].Value.Trim()
     $parameters = $block.Groups[3].Value.Trim()
@@ -77,45 +115,90 @@ foreach ($block in $blocks) {
     
     # Format the prototype, preserving pointer spacing as in original
     $prototype = "$returnType $functionName($parameters);"
-    $functionPrototypes += $prototype
+    if (-not ($prototype -match 'static')) {
+        $publicPrototypes += $prototype
+    }
 }
 
-# Generate the header file content
-$headerContent = @"
+# Generate the public header file content
+$publicHeaderContent = @"
 
 /*
- * This is an automatically generated header file from the source file: $SourceFile
+ * This is an automatically generated public header file from the source file: $SourceFile
  * Do not modify this file directly. Instead, modify the source file and regenerate this header.
  * 
  * Generated on: $(Get-Date)
- * Source file size: $(($sourceContent.Length / 1KB).ToString("F2")) KB
- * Source file lines: $($sourceContent.Split("`n").Count)
- * Function prototypes found: $($functionPrototypes.Count)
+ * Source file: $SourceFile
+ * Contains public function prototypes: $($publicPrototypes.Count)
  */
 
-#ifndef $includeGuard
-#define $includeGuard
+#ifndef $publicGuard
+#define $publicGuard
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// Function Prototypes
-$($functionPrototypes -join "`n")
+// Include necessary system headers
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+
+// Public Function Prototypes
+$($publicPrototypes -join "`n")
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif // $includeGuard
+#endif // $publicGuard
 "@
 
-# Write to the output file
+# Generate the private header file content
+$privateHeaderContent = @"
+
+/*
+ * This is an automatically generated private header file from the source file: $SourceFile
+ * Do not modify this file directly. Instead, modify the source file and regenerate this header.
+ * 
+ * Generated on: $(Get-Date)
+ * Source file: $SourceFile
+ * Contains static function prototypes: $($staticPrototypes.Count)
+ */
+
+#ifndef $privateGuard
+#define $privateGuard
+
+// Include the public header first to ensure all types are available
+#include "$(Split-Path $OutputFile -Leaf)"
+
+// Static Function Prototypes - only include this header in the corresponding .c file
+$($staticPrototypes -join "`n")
+
+#endif // $privateGuard
+"@
+
+# Write to the output files
 try {
-    Set-Content -Path $OutputFile -Value $headerContent -ErrorAction Stop
-    Write-Host "Header file generated successfully: $OutputFile"
-    Write-Host "Found $($functionPrototypes.Count) function prototypes"
+    # Create headers directory if it doesn't exist
+    if (-not (Test-Path -Path $headersDir)) {
+        New-Item -ItemType Directory -Path $headersDir -Force | Out-Null
+    }
+
+    # Write public header
+    Set-Content -Path $OutputFile -Value $publicHeaderContent -ErrorAction Stop
+    
+    # Only write private header if there are static functions to include
+    if ($staticPrototypes.Count -gt 0) {
+        Set-Content -Path $PrivateOutputFile -Value $privateHeaderContent -ErrorAction Stop
+        Write-Host "Header files generated successfully:"
+        Write-Host "  Public: $OutputFile ($($publicPrototypes.Count) prototypes)"
+        Write-Host "  Private: $PrivateOutputFile ($($staticPrototypes.Count) prototypes)"
+    } else {
+        Write-Host "No static functions found. Only public header generated:"
+        Write-Host "  Public: $OutputFile ($($publicPrototypes.Count) prototypes)"
+    }
 } catch {
-    Write-Error "Failed to create header file: $_"
+    Write-Error "Failed to create header files: $_"
     exit 1
 }

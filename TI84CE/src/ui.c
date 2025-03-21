@@ -13,6 +13,7 @@
 #include <ti/screen.h>
 #include "headers/mathsolver.h"
 #include "headers/ui.h"
+#include "headers/ui_private.h"
 
 /* ============================== State Variables ============================== */
 
@@ -54,7 +55,7 @@ static bool show_step_details = false;
 /**
  * Clears the screen and resets the cursor to the home position.
  */
-static void clear_screen(void) {
+void clear_screen(void) {
     os_FontSelect(os_SmallFont);
     os_ClrHome();
     os_SetCursorPos(0, 0);
@@ -67,8 +68,22 @@ static void new_line(void) {
     os_NewLine();
 }
 
-static void print_string(const char* str) {
+/**
+ * Prints a string to the screen.
+ * 
+ * @param str The string to print.
+ */
+void print(const char* str) {
     os_PutStrFull(str);
+}
+
+/**
+ * Prints a string to the screen followed by a newline character.
+ * 
+ * @param str The string to print.
+ */
+void println(const char* str) {
+    print(str);
     new_line();
 }
 
@@ -77,7 +92,7 @@ static void print_string(const char* str) {
  * 
  * @param text The string to center.
  */
-static void print_centered(const char* str) {
+void print_centered(const char* str) {
     int len = strlen(str);
     int padding = (SCREEN_COLS - len) / 2;
     print_format("%*s%s", padding, "", str);
@@ -89,7 +104,7 @@ static void print_centered(const char* str) {
  * @param text The string to print.
  * @param max_length The maximum length of the string to display.
  */
-static void print_truncated(const char* str, int max_length) {
+void print_truncated(const char* str, int max_length) {
     char buffer[SCREEN_COLS + 1];
     
     if (max_length > SCREEN_COLS) {
@@ -109,19 +124,32 @@ static void print_truncated(const char* str, int max_length) {
         buffer[max_length] = '\0';
         os_PutStrFull(buffer);
     }
+    new_line();
 }
 
-static void print_format(const char* format, ...) {
+/**
+ * Prints a formatted string to the screen.
+ * 
+ * @param format The format string to print.
+ * @param ... Additional arguments to format.
+ */
+void print_format(const char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
     vsprintf(buffer, format, args);
     va_end(args);
     
-    print_string(buffer);
+    println(buffer);
 }
 
-static void print_format_centered(const char* format, ...) {
+/**
+ * Prints a formatted string centered on the screen.
+ * 
+ * @param format The format string to print.
+ * @param ... Additional arguments to format.
+ */
+void print_format_centered(const char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
@@ -131,10 +159,17 @@ static void print_format_centered(const char* format, ...) {
     print_centered(buffer);
 }
 
-static void print_format_truncated(int max_length, const char* format, ...) {
+/**
+ * Prints a formatted string truncated to fit within the specified maximum length.
+ * 
+ * @param max_length The maximum length of the string to display.
+ * @param format The format string to print.
+ * @param ... Additional arguments to format.
+ */
+void print_format_truncated(int max_length, const char* format, ...) {
     char buffer[255];
     va_list args;
-    va_start(args, max_length);
+    va_start(args, format);
     vsprintf(buffer, format, args);
     va_end(args);
     
@@ -155,7 +190,7 @@ static void draw_horizontal_line(char line_char) {
     }
     line[SCREEN_COLS] = '\0';
     
-    print_string(line);
+    println(line);
 }
 
 /* ============================== UI Drawing Functions ============================== */
@@ -167,6 +202,7 @@ void draw_header(void) {
     clear_screen();
     print_centered("MathSolver TI-84 CE");
     draw_horizontal_line('-');
+    os_SetCursorPos(2,0);
 }
 
 /**
@@ -174,8 +210,6 @@ void draw_header(void) {
  */
 void show_input_prompt(void) {
     draw_header();
-    
-    print_string("Enter expression:");
     
     // Show the current arithmetic mode and precision
     ArithmeticType mode = get_arithmetic_mode();
@@ -187,11 +221,14 @@ void show_input_prompt(void) {
                     mode == ARITHMETIC_TRUNCATE ? "Truncate" : "Round");
     
     if (mode == ARITHMETIC_NORMAL)
-        print_string("Prec: Default");
+        println("Prec: Default");
     else
         print_format("Prec: %d %s", 
                 precision,
                 use_sig_digits ? "sig" : "dec");
+
+    new_line();
+    println("Enter expression:");
 }
 
 /**
@@ -214,9 +251,6 @@ void show_calculation_result(CalculationResult* result) {
         // Show calculation steps heading
         print_format("Steps (%d):", result->step_count);
         
-        // Calculate how many steps we can display
-        int visible_steps = 1; // Just show one at a time to keep it simple
-        
         // Ensure step_scroll_position is within bounds
         if (step_scroll_position > result->step_count - 1) {
             step_scroll_position = result->step_count - 1;
@@ -235,8 +269,8 @@ void show_calculation_result(CalculationResult* result) {
     }
     
     // Navigation hints
-    new_line();
-    print_string("[MODE]:Input [CLEAR]:Exit");
+    os_SetCursorPos(SCREEN_ROWS + 1, 0);
+    print("<MODE>:Input <CLEAR>:Exit");
 }
 
 /**
@@ -325,8 +359,7 @@ void show_settings_menu(void) {
  */
 bool get_expression_input(char* buffer, int buffer_size) {
     // Prepare for input
-    os_SetCursorPos(3, 0);
-    os_PutStrFull("> ");
+    os_SetCursorPos(6, 0);
     
     // Make sure buffer is cleared
     buffer[0] = '\0';
@@ -336,7 +369,7 @@ bool get_expression_input(char* buffer, int buffer_size) {
     
     // Get input - check documentation for exact parameters
     // The first parameter might need to be NULL
-    os_GetStringInput(NULL, buffer, buffer_size - 1);
+    os_GetStringInput("> ", buffer, buffer_size - 1);
     
     // Ensure null termination
     buffer[buffer_size - 1] = '\0';
@@ -389,6 +422,25 @@ void toggle_significant_digits(void) {
 }
 
 /* ============================== Main UI Function ============================== */
+
+void WaitForKeyDown(void) {
+    while (!kb_AnyKey()) {
+        kb_Scan();
+        delay(50);
+    }
+}
+
+void WaitForKeyRelease(void) {
+    while (kb_AnyKey()) {
+        kb_Scan();
+        delay(50);
+    }
+}
+
+void WaitForKeyPress(void) {
+    WaitForKeyDown();
+    WaitForKeyRelease();
+}
 
 /**
  * Main function that runs the calculator's user interface.
@@ -480,38 +532,26 @@ void run_calculator_ui(void) {
                 show_error_message(error_message);
                 
                 // Wait for any key press to return to input
-                while (!kb_AnyKey()) {
-                    kb_Scan();
-                    delay(50);
-                }
+                WaitForKeyDown();
                 
                 // Set next state
                 current_state = STATE_INPUT;
                 
                 // Wait for key release
-                while (kb_AnyKey()) {
-                    kb_Scan();
-                    delay(50);
-                }
+                WaitForKeyRelease();
                 break;
                 
             case STATE_HELP:
                 show_help_screen();
                 
                 // Wait for any key press to return to input
-                while (!kb_AnyKey()) {
-                    kb_Scan();
-                    delay(50);
-                }
+                WaitForKeyDown();
                 
                 // Set next state
                 current_state = STATE_INPUT;
                 
                 // Wait for key release
-                while (kb_AnyKey()) {
-                    kb_Scan();
-                    delay(50);
-                }
+                WaitForKeyRelease();
                 break;
                 
             case STATE_SETTINGS:

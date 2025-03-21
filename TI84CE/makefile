@@ -21,9 +21,6 @@ DEBUG ?= 1
 CFLAGS += -Wall -Wextra -pedantic -std=c11
 CFLAGS += -Os # Optimize for size
 
-# Include directories
-CFLAGS += -I. -I./headers
-
 # Additional libraries needed for the project
 LIBS = -lc -lm -lgraphx -lkeypadc -lfileioc
 

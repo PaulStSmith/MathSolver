@@ -8,8 +8,11 @@
 
 #include <tice.h>
 #include <graphx.h>
+#include <keypadc.h>
+
 #include "headers/mathsolver.h"
 #include "headers/ui.h"
+#include "headers/log.h"
 
 /**
  * @brief Main function of the MathSolver application.
@@ -21,6 +24,13 @@
  * @return int Returns 0 upon successful execution.
  */
 int main(void) {
+
+    // Initialize screen and keyboard
+    os_ClrHome();
+    kb_Reset();
+
+    logger_init();      // Initializes the debug logger for logging messages.
+    
     // Initialize the math solver
     mathsolver_init(); // Sets up the math solver environment and resources.
     
