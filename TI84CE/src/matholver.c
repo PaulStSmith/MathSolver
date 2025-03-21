@@ -1,7 +1,9 @@
 /**
  * MathSolver for TI-84 CE - Core Implementation
  * 
- * Implements the math solver core functionality
+ * This file implements the core functionality of the MathSolver, including
+ * tokenization, parsing, expression evaluation, variable management, and
+ * arithmetic formatting.
  */
 
 #include <tice.h>
@@ -13,15 +15,28 @@
 
 /* ============================== Global Variables ============================== */
 
-// Static memory pool for expression nodes
+/**
+ * Static memory pool for expression nodes.
+ * Used to allocate nodes for the expression tree.
+ */
 static ExpressionNode node_pool[MAX_NODES];
+
+/** Index of the next available node in the node pool. */
 static int node_pool_index = 0;
 
-// Variables
+/**
+ * Array of variables used in expressions.
+ * Stores user-defined variables and their values.
+ */
 static Variable variables[MAX_VARIABLES];
+
+/** Number of currently defined variables. */
 static int variable_count = 0;
 
-// Current arithmetic settings
+/**
+ * Current arithmetic settings for calculations.
+ * Includes arithmetic type, precision, and significant digit usage.
+ */
 static ArithmeticType current_arithmetic_type = ARITHMETIC_NORMAL;
 static int current_precision = 4;
 static bool current_use_significant_digits = false;
@@ -29,7 +44,8 @@ static bool current_use_significant_digits = false;
 /* ============================== Initialization and Cleanup ============================== */
 
 /**
- * Initializes the math solver
+ * Initializes the math solver.
+ * Resets the node pool and variable list to their initial states.
  */
 void mathsolver_init(void) {
     // Reset node pool
@@ -42,7 +58,8 @@ void mathsolver_init(void) {
 }
 
 /**
- * Cleans up the math solver resources
+ * Cleans up the math solver resources.
+ * Resets the node pool and variable list.
  */
 void mathsolver_cleanup(void) {
     // Reset node pool
@@ -55,7 +72,8 @@ void mathsolver_cleanup(void) {
 /* ============================== Tokenization Implementation ============================== */
 
 /**
- * Advances to the next character in the input
+ * Advances to the next character in the input string.
+ * Updates the tokenizer's position, line, and column.
  */
 static void advance_position(Tokenizer* tokenizer) {
     if (tokenizer->input[tokenizer->position] == '\n') {
@@ -68,7 +86,8 @@ static void advance_position(Tokenizer* tokenizer) {
 }
 
 /**
- * Skips whitespace characters
+ * Skips whitespace characters in the input string.
+ * Advances the tokenizer's position past spaces, tabs, and newlines.
  */
 static void skip_whitespace(Tokenizer* tokenizer) {
     while (tokenizer->input[tokenizer->position] != '\0' && 
@@ -81,7 +100,11 @@ static void skip_whitespace(Tokenizer* tokenizer) {
 }
 
 /**
- * Initializes a tokenizer with the given input string
+ * Initializes a tokenizer with the given input string.
+ * Prepares the tokenizer to start tokenizing the input.
+ * 
+ * @param tokenizer Pointer to the tokenizer to initialize.
+ * @param input The input string to tokenize.
  */
 void tokenizer_init(Tokenizer* tokenizer, const char* input) {
     tokenizer->input = input;
@@ -94,7 +117,11 @@ void tokenizer_init(Tokenizer* tokenizer, const char* input) {
 }
 
 /**
- * Gets the next token from the input
+ * Gets the next token from the input string.
+ * Identifies numbers, variables, functions, and operators.
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @return The next token in the input string.
  */
 Token get_next_token(Tokenizer* tokenizer) {
     // Skip whitespace
@@ -211,7 +238,10 @@ Token get_next_token(Tokenizer* tokenizer) {
 /* ============================== Node Creation ============================== */
 
 /**
- * Allocates a node from the node pool
+ * Allocates a node from the node pool.
+ * Returns NULL if the node pool is full.
+ * 
+ * @return Pointer to the allocated node, or NULL if the pool is full.
  */
 static ExpressionNode* allocate_node(void) {
     if (node_pool_index >= MAX_NODES) {
@@ -224,7 +254,11 @@ static ExpressionNode* allocate_node(void) {
 }
 
 /**
- * Creates a number node
+ * Creates a number node with the given value and position.
+ * 
+ * @param value The numeric value of the node.
+ * @param position The source position of the node.
+ * @return Pointer to the created node, or NULL if allocation fails.
  */
 static ExpressionNode* create_number_node(double value, SourcePosition position) {
     ExpressionNode* node = allocate_node();
@@ -238,7 +272,11 @@ static ExpressionNode* create_number_node(double value, SourcePosition position)
 }
 
 /**
- * Creates a variable node
+ * Creates a variable node with the given name and position.
+ * 
+ * @param name The name of the variable.
+ * @param position The source position of the node.
+ * @return Pointer to the created node, or NULL if allocation fails.
  */
 static ExpressionNode* create_variable_node(const char* name, SourcePosition position) {
     ExpressionNode* node = allocate_node();
@@ -253,7 +291,13 @@ static ExpressionNode* create_variable_node(const char* name, SourcePosition pos
 }
 
 /**
- * Creates a binary operation node
+ * Creates a binary operation node.
+ * 
+ * @param type The type of the binary operation (e.g., addition, subtraction).
+ * @param left Pointer to the left operand node.
+ * @param right Pointer to the right operand node.
+ * @param position The source position of the node.
+ * @return Pointer to the created node, or NULL if allocation fails.
  */
 static ExpressionNode* create_binary_op_node(NodeType type, ExpressionNode* left, ExpressionNode* right, SourcePosition position) {
     ExpressionNode* node = allocate_node();
@@ -268,7 +312,12 @@ static ExpressionNode* create_binary_op_node(NodeType type, ExpressionNode* left
 }
 
 /**
- * Creates a function node
+ * Creates a function node.
+ * 
+ * @param func_type The type of the function (e.g., sin, cos).
+ * @param argument Pointer to the argument node.
+ * @param position The source position of the node.
+ * @return Pointer to the created node, or NULL if allocation fails.
  */
 static ExpressionNode* create_function_node(FunctionType func_type, ExpressionNode* argument, SourcePosition position) {
     ExpressionNode* node = allocate_node();
@@ -283,7 +332,11 @@ static ExpressionNode* create_function_node(FunctionType func_type, ExpressionNo
 }
 
 /**
- * Creates a factorial node
+ * Creates a factorial node.
+ * 
+ * @param expression Pointer to the expression node to apply the factorial to.
+ * @param position The source position of the node.
+ * @return Pointer to the created node, or NULL if allocation fails.
  */
 static ExpressionNode* create_factorial_node(ExpressionNode* expression, SourcePosition position) {
     ExpressionNode* node = allocate_node();
@@ -297,7 +350,11 @@ static ExpressionNode* create_factorial_node(ExpressionNode* expression, SourceP
 }
 
 /**
- * Creates a parenthesis node
+ * Creates a parenthesis node.
+ * 
+ * @param expression Pointer to the expression node inside the parentheses.
+ * @param position The source position of the node.
+ * @return Pointer to the created node, or NULL if allocation fails.
  */
 static ExpressionNode* create_parenthesis_node(ExpressionNode* expression, SourcePosition position) {
     ExpressionNode* node = allocate_node();
@@ -312,15 +369,12 @@ static ExpressionNode* create_parenthesis_node(ExpressionNode* expression, Sourc
 
 /* ============================== Parser Implementation ============================== */
 
-// Forward declarations for recursive descent parser
-static ExpressionNode* parse_expression(Tokenizer* tokenizer);
-static ExpressionNode* parse_term(Tokenizer* tokenizer);
-static ExpressionNode* parse_factor(Tokenizer* tokenizer);
-static ExpressionNode* parse_primary(Tokenizer* tokenizer);
-static ExpressionNode* parse_function(Tokenizer* tokenizer, FunctionType func_type);
-
 /**
- * Matches the current token type and advances to the next token
+ * Matches the current token type and advances to the next token.
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @param type The expected token type.
+ * @return True if the current token matches the expected type, false otherwise.
  */
 static bool match_and_consume(Tokenizer* tokenizer, TokenType type) {
     if (tokenizer->current_token.type == type) {
@@ -331,7 +385,11 @@ static bool match_and_consume(Tokenizer* tokenizer, TokenType type) {
 }
 
 /**
- * Expects a specific token type and advances, or reports an error
+ * Expects a specific token type and advances, or reports an error.
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @param type The expected token type.
+ * @return True if the current token matches the expected type, false otherwise.
  */
 static bool expect(Tokenizer* tokenizer, TokenType type) {
     if (tokenizer->current_token.type == type) {
@@ -342,7 +400,10 @@ static bool expect(Tokenizer* tokenizer, TokenType type) {
 }
 
 /**
- * Parses an input string into an expression tree
+ * Parses an input string into an expression tree.
+ * 
+ * @param input The input string to parse.
+ * @return Pointer to the root of the parsed expression tree, or NULL on error.
  */
 ExpressionNode* parse_expression_string(const char* input) {
     // Reset node pool
@@ -357,7 +418,10 @@ ExpressionNode* parse_expression_string(const char* input) {
 }
 
 /**
- * Parses an expression (addition/subtraction)
+ * Parses an expression (addition/subtraction).
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @return Pointer to the parsed expression node.
  */
 static ExpressionNode* parse_expression(Tokenizer* tokenizer) {
     ExpressionNode* left = parse_term(tokenizer);
@@ -384,7 +448,10 @@ static ExpressionNode* parse_expression(Tokenizer* tokenizer) {
 }
 
 /**
- * Parses a term (multiplication/division)
+ * Parses a term (multiplication/division).
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @return Pointer to the parsed term node.
  */
 static ExpressionNode* parse_term(Tokenizer* tokenizer) {
     ExpressionNode* left = parse_factor(tokenizer);
@@ -411,7 +478,10 @@ static ExpressionNode* parse_term(Tokenizer* tokenizer) {
 }
 
 /**
- * Parses a factor (exponentiation)
+ * Parses a factor (exponentiation).
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @return Pointer to the parsed factor node.
  */
 static ExpressionNode* parse_factor(Tokenizer* tokenizer) {
     ExpressionNode* left = parse_primary(tokenizer);
@@ -440,7 +510,10 @@ static ExpressionNode* parse_factor(Tokenizer* tokenizer) {
 }
 
 /**
- * Parses a primary expression (numbers, variables, functions, parenthesized expressions)
+ * Parses a primary expression (numbers, variables, functions, parenthesized expressions).
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @return Pointer to the parsed primary expression node.
  */
 static ExpressionNode* parse_primary(Tokenizer* tokenizer) {
     Token token = tokenizer->current_token;
@@ -528,7 +601,11 @@ static ExpressionNode* parse_primary(Tokenizer* tokenizer) {
 }
 
 /**
- * Parses a function call
+ * Parses a function call.
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @param func_type The type of the function being parsed.
+ * @return Pointer to the parsed function node.
  */
 static ExpressionNode* parse_function(Tokenizer* tokenizer, FunctionType func_type) {
     SourcePosition position = tokenizer->current_token.position;
@@ -554,7 +631,10 @@ static ExpressionNode* parse_function(Tokenizer* tokenizer, FunctionType func_ty
 /* ============================== Variable Management ============================== */
 
 /**
- * Sets a variable value
+ * Sets a variable value.
+ * 
+ * @param name The name of the variable.
+ * @param value The value to assign to the variable.
  */
 void set_variable(const char* name, double value) {
     // Check if variable already exists
@@ -577,7 +657,11 @@ void set_variable(const char* name, double value) {
 }
 
 /**
- * Gets a variable value
+ * Gets a variable value.
+ * 
+ * @param name The name of the variable.
+ * @param found Pointer to a boolean that will be set to true if the variable is found, false otherwise.
+ * @return The value of the variable, or 0 if not found.
  */
 double get_variable(const char* name, bool* found) {
     // Check for built-in constants
@@ -604,7 +688,10 @@ double get_variable(const char* name, bool* found) {
 }
 
 /**
- * Checks if a name is a mathematical constant
+ * Checks if a name is a mathematical constant.
+ * 
+ * @param name The name to check.
+ * @return True if the name is a constant, false otherwise.
  */
 bool is_constant(const char* name) {
     return (strcmp(name, "pi") == 0 || strcmp(name, "PI") == 0 || 
@@ -615,7 +702,11 @@ bool is_constant(const char* name) {
 /* ============================== Function Evaluation ============================== */
 
 /**
- * Evaluates a mathematical function
+ * Evaluates a mathematical function.
+ * 
+ * @param func_type The type of the function to evaluate.
+ * @param argument The argument to the function.
+ * @return The result of the function evaluation.
  */
 static double evaluate_function(FunctionType func_type, double argument) {
     switch (func_type) {
@@ -657,9 +748,11 @@ static double evaluate_function(FunctionType func_type, double argument) {
     }
 }
 
-
 /**
- * Gets the name of a function
+ * Gets the name of a function.
+ * 
+ * @param func_type The type of the function.
+ * @return The name of the function as a string.
  */
 static const char* get_function_name(FunctionType func_type) {
     switch (func_type) {
@@ -676,7 +769,11 @@ static const char* get_function_name(FunctionType func_type) {
 /* ============================== Number Formatting ============================== */
 
 /**
- * Sets the arithmetic mode for calculations
+ * Sets the arithmetic mode for calculations.
+ * 
+ * @param type The arithmetic type (e.g., normal, truncate, round).
+ * @param precision The number of decimal places or significant digits.
+ * @param use_significant_digits Whether to use significant digits.
  */
 void set_arithmetic_mode(ArithmeticType type, int precision, bool use_significant_digits) {
     current_arithmetic_type = type;
@@ -685,28 +782,38 @@ void set_arithmetic_mode(ArithmeticType type, int precision, bool use_significan
 }
 
 /**
- * Gets the current arithmetic mode
+ * Gets the current arithmetic mode.
+ * 
+ * @return The current arithmetic type.
  */
 ArithmeticType get_arithmetic_mode(void) {
     return current_arithmetic_type;
 }
 
 /**
- * Gets the current precision
+ * Gets the current precision.
+ * 
+ * @return The current precision setting.
  */
 int get_precision(void) {
     return current_precision;
 }
 
 /**
- * Gets whether significant digits are used
+ * Gets whether significant digits are used.
+ * 
+ * @return True if significant digits are used, false otherwise.
  */
 bool get_use_significant_digits(void) {
     return current_use_significant_digits;
 }
 
 /**
- * Truncates a value to a specific number of decimal places
+ * Truncates a value to a specific number of decimal places.
+ * 
+ * @param value The value to truncate.
+ * @param decimal_places The number of decimal places to keep.
+ * @return The truncated value.
  */
 static double truncate_to_decimal_places(double value, int decimal_places) {
     if (decimal_places < 0) {
@@ -723,7 +830,11 @@ static double truncate_to_decimal_places(double value, int decimal_places) {
 }
 
 /**
- * Rounds a value to a specific number of significant digits
+ * Rounds a value to a specific number of significant digits.
+ * 
+ * @param value The value to round.
+ * @param sig_digits The number of significant digits to keep.
+ * @return The rounded value.
  */
 static double round_to_significant_digits(double value, int sig_digits) {
     if (sig_digits <= 0) {
@@ -750,7 +861,10 @@ static double round_to_significant_digits(double value, int sig_digits) {
 }
 
 /**
- * Applies arithmetic formatting to a value
+ * Applies arithmetic formatting to a value.
+ * 
+ * @param value The value to format.
+ * @return The formatted value.
  */
 double apply_arithmetic_format(double value) {
     switch (current_arithmetic_type) {
@@ -780,7 +894,10 @@ double apply_arithmetic_format(double value) {
 }
 
 /**
- * Formats a number as a string
+ * Formats a number as a string.
+ * 
+ * @param value The value to format.
+ * @param buffer The buffer to store the formatted string.
  */
 void format_number(double value, char* buffer) {
     // Format the number according to the current arithmetic settings
@@ -799,7 +916,10 @@ void format_number(double value, char* buffer) {
 /* ============================== Expression Evaluation ============================== */
 
 /**
- * Evaluates an expression node
+ * Evaluates an expression node.
+ * 
+ * @param node Pointer to the expression node to evaluate.
+ * @return The result of the evaluation.
  */
 double evaluate_expression(ExpressionNode* node) {
     if (node == NULL) return 0;
@@ -892,7 +1012,11 @@ double evaluate_expression(ExpressionNode* node) {
 }
 
 /**
- * Evaluates an expression string
+ * Evaluates an expression string.
+ * 
+ * @param input The input string to evaluate.
+ * @param result Pointer to the structure to store the result.
+ * @return True if the evaluation is successful, false otherwise.
  */
 bool evaluate_expression_string(const char* input, CalculationResult* result) {
     // Parse the expression
@@ -915,7 +1039,11 @@ bool evaluate_expression_string(const char* input, CalculationResult* result) {
 }
 
 /**
- * Evaluates an expression with step-by-step tracking
+ * Evaluates an expression with step-by-step tracking.
+ * 
+ * @param node Pointer to the expression node to evaluate.
+ * @param result Pointer to the structure to store the evaluation steps.
+ * @return The result of the evaluation.
  */
 double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
     if (node == NULL) return 0;

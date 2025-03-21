@@ -1,0 +1,20 @@
+{
+    "configurations": [
+        {
+            "name": "z80",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/CEdev/include/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "compilerPath": "C:/CEdev/bin/ez80-clang.exe",
+            "intelliSenseMode": "${default}",
+            "cStandard": "c11"
+        }
+    ],
+    "version": 4
+}
