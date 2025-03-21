@@ -259,6 +259,39 @@ ExpressionNode* parse_expression_string(const char* input);
 static ExpressionNode* parse_expression(Tokenizer* tokenizer);
 
 /**
+ * Parses a term (multiplication/division).
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @return Pointer to the parsed term node.
+ */
+static ExpressionNode* parse_term(Tokenizer* tokenizer);
+
+/**
+ * Parses a factor (exponentiation).
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @return Pointer to the parsed factor node.
+ */
+static ExpressionNode* parse_factor(Tokenizer* tokenizer);
+
+/**
+ * Parses a primary expression (numbers, variables, functions, parenthesized expressions).
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @return Pointer to the parsed primary expression node.
+ */
+static ExpressionNode* parse_primary(Tokenizer* tokenizer);
+
+/**
+ * Parses a function call.
+ * 
+ * @param tokenizer Pointer to the tokenizer.
+ * @param func_type The type of the function being parsed.
+ * @return Pointer to the parsed function node.
+ */
+static ExpressionNode* parse_function(Tokenizer* tokenizer, FunctionType func_type);
+
+/**
  * Evaluate an expression string and store the result
  * @param input Input string to evaluate
  * @param result Pointer to the result structure
