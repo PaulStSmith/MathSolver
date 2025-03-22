@@ -2,6 +2,7 @@
     "files.associations": {
         "mathsolver.h": "c",
         "mathsolver_private.h": "c",
-        "arithmetic_public.h": "c"
+        "arithmetic_public.h": "c",
+        "keypadc.h": "c"
     }
 }

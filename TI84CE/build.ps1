@@ -3,14 +3,8 @@ Remove-Item .\obj\* -Recurse -Force
 Clear-Host
 Write-Host "Building project..."
 Write-Host "Calling CreateHeaders.ps1"
-.\CreateHeaders.ps1 -SourceFile .\src\log.c
-.\CreateHeaders.ps1 -SourceFile .\src\ui.c
-.\CreateHeaders.ps1 -SourceFile .\src\mathsolver.c
-.\CreateHeaders.ps1 -SourceFile .\src\tokenizer.c
-.\CreateHeaders.ps1 -SourceFile .\src\parser.c
-.\CreateHeaders.ps1 -SourceFile .\src\evaluator.c
-.\CreateHeaders.ps1 -SourceFile .\src\arithmetic.c
-.\CreateHeaders.ps1 -SourceFile .\src\variables.c
+# Search for all .c files in the src directory and call CreateHeaders.ps1 on each one
+Get-ChildItem .\src\*.c | ForEach-Object { .\CreateHeaders.ps1 -SourceFile $_.FullName }
 write-host "Calling make"
 make
 

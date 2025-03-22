@@ -100,6 +100,44 @@ static double round_to_significant_digits(double value, int sig_digits) {
 }
 
 /**
+ * Truncates a value to a specific number of significant digits.
+ * 
+ * @param value The value to truncate.
+ * @param sig_digits The number of significant digits to keep.
+ * @return The truncated value.
+ */
+static double truncate_to_significant_digits(double value, int sig_digits) {
+    if (sig_digits <= 0) {
+        sig_digits = 1;
+    }
+
+    if (fabs(value) < EPSILON) {
+        return 0.0;
+    }
+
+    // Get the exponent (power of 10) of the value
+    int exponent = (int)floor(log10(fabs(value)));
+
+    // Calculate the number of decimal places needed
+    int decimal_places = sig_digits - exponent - 1;
+
+    // Adjust for small numbers (value < 1)
+    if (fabs(value) < 1 && value != 0) {
+        decimal_places = sig_digits + abs(exponent) - 1;
+    }
+
+    // Calculate the multiplier for truncation
+    double multiplier = pow(10.0, decimal_places);
+
+    // Truncate the value
+    if (value >= 0) {
+        return floor(value * multiplier) / multiplier;
+    } else {
+        return ceil(value * multiplier) / multiplier;
+    }
+}
+
+/**
  * Applies arithmetic formatting to a value.
  * 
  * @param value The value to format.
@@ -112,9 +150,7 @@ double apply_arithmetic_format(double value) {
             
         case ARITHMETIC_TRUNCATE:
             if (current_use_significant_digits) {
-                // Implement significant digit truncation
-                // For simplicity, we'll use rounding for now
-                return round_to_significant_digits(value, current_precision);
+                return truncate_to_significant_digits(value, current_precision);
             } else {
                 return truncate_to_decimal_places(value, current_precision);
             }

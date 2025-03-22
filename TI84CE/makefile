@@ -4,10 +4,6 @@
 # Application name
 NAME = MATHSLVR
 
-# Source files
-C_FILES = main.c mathsolver.c ui.c
-# You can rename the source files based on how you've organized your code
-
 # Object files
 OBJS = $(patsubst %.c,%.o,$(C_FILES))
 
@@ -18,39 +14,31 @@ include $(shell cedev-config --makefile)
 DEBUG ?= 1
 
 # Compiler flags
-CFLAGS += -Wall -Wextra -pedantic -std=c11
-CFLAGS += -Os # Optimize for size
+CFLAGS += -Wall        # Enable all compiler's warning messages
+CFLAGS += -Wextra      # Enable additional warning messages not covered by -Wall
+CFLAGS += -pedantic    # Enforce strict compliance with the C standard
+CFLAGS += -std=c11     # Specify the C language standard to use (C11 in this case)
+CFLAGS += -Os          # Optimize for size, reducing the binary size
 
 # Additional libraries needed for the project
-LIBS = -lc -lm -lgraphx -lkeypadc -lfileioc
+LIBS += -lc         # Standard C library
+LIBS += -lm         # Math library for mathematical functions
+LIBS += -lgraphx    # Graphics library for drawing on the TI-84 CE screen
+LIBS += -lkeypadc   # Keypad control library for handling user input
+LIBS += -lfileioc   # File I/O library for reading/writing files
 
-# CEmu emulator support (if available)
-ifndef CEmu
-  ifeq ($(OS),Windows_NT)
-    CEmu = C:\CEdev\bin\CEmu-v2.0_win64_Qt6.exe
-  else
-    CEmu = cemu
-  endif
-endif
+release:
+	$(MAKE) DEBUG=0 rebuild
 
 # Clean rule (overriding the default one from the toolchain)
 clean:
 	@if exist bin rd bin /s /q
 	@if exist obj rd obj /s /q
 
-# Build and run in emulator
-run: all
-	$(CEmu) $(NAME).8xp &
-
 # Extra rules for convenience
 
 # Rebuild everything
 rebuild: clean all
-
-# Header file dependencies
-main.o: headers/mathsolver.h headers/ui.h
-mathsolver.o: headers/mathsolver.h
-ui.o: headers/mathsolver.h headers/ui.h
 
 # Custom help rule
 help:
@@ -59,6 +47,5 @@ help:
 	@echo "make         - Build the application"
 	@echo "make clean   - Remove all generated files"
 	@echo "make rebuild - Clean and rebuild"
-	@echo "make run     - Build and run in CEmu emulator (if available)"
 	@echo "make debug   - Build with debug symbols"
-	@echo "DEBUG=0 make - Build without debug symbols (for release)"
+	@echo "make release - Build without debug symbols"

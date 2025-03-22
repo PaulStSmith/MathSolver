@@ -88,6 +88,16 @@ void println(const char* str) {
 }
 
 /**
+ * Prints a string at the last row of the screen.
+ * 
+ * @param str The string to print.
+ */
+void print_footer(char* str) {
+    os_SetCursorPos(SCREEN_ROWS + 1, 0);
+    print(str);
+}
+
+/**
  * Centers a string on the screen.
  * 
  * @param text The string to center.
@@ -267,8 +277,7 @@ void show_calculation_result(CalculationResult* result) {
     }
     
     // Navigation hints
-    os_SetCursorPos(SCREEN_ROWS + 1, 0);
-    print("<MODE>:Input <CLEAR>:Exit");
+    print_footer("<MODE>:Input <CLEAR>:Exit");
 }
 
 /**
@@ -324,26 +333,15 @@ void show_settings_menu(void) {
     draw_header();
     
     print_centered("Settings");
-    new_line();
     
     // Display current settings
-    os_PutStrFull("1.Mode: ");
-    os_PutStrFull(mode == ARITHMETIC_NORMAL ? "Normal" : 
-                mode == ARITHMETIC_TRUNCATE ? "Truncate" : "Round");
-    new_line();
+    print_format("1. Mode: %s", 
+                    mode == ARITHMETIC_NORMAL ? "Normal" : 
+                    mode == ARITHMETIC_TRUNCATE ? "Truncate" : "Round");
+    print_format("2. Precision: %d", precision);
+    print_format("3. Type: %s", use_sig_digits ? "Sig.Digits" : "Dec.Places");
     
-    os_PutStrFull("2.Precision: ");
-    char prec_str[8];
-    sprintf(prec_str, "%d", precision);
-    os_PutStrFull(prec_str);
-    new_line();
-    
-    os_PutStrFull("3.Type: ");
-    os_PutStrFull(use_sig_digits ? "Sig.Digits" : "Dec.Places");
-    new_line();
-    
-    new_line();
-    os_PutStrFull("Press # to change setting");
+    print_footer("<MODE>:Input <1-3>:Change");
 }
 
 /* ============================== Input Handling ============================== */
@@ -453,6 +451,8 @@ void run_calculator_ui(void) {
     // Initialize screen and keyboard
     os_ClrHome();
     kb_Reset();
+
+    current_state = STATE_SETTINGS;
     
     // Main program loop
     while (running) {
