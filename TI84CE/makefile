@@ -27,7 +27,7 @@ LIBS = -lc -lm -lgraphx -lkeypadc -lfileioc
 # CEmu emulator support (if available)
 ifndef CEmu
   ifeq ($(OS),Windows_NT)
-    CEmu = cemu.exe
+    CEmu = C:\CEdev\bin\CEmu-v2.0_win64_Qt6.exe
   else
     CEmu = cemu
   endif
@@ -35,7 +35,8 @@ endif
 
 # Clean rule (overriding the default one from the toolchain)
 clean:
-	$(RM) $(OBJS) $(NAME).8xp $(NAME).hex obj/*.bc obj/*.src obj/*.rst
+	@if exist bin rd bin /s /q
+	@if exist obj rd obj /s /q
 
 # Build and run in emulator
 run: all

@@ -166,14 +166,14 @@ void print_format_centered(const char* format, ...) {
  * @param format The format string to print.
  * @param ... Additional arguments to format.
  */
-void print_format_truncated(int max_length, const char* format, ...) {
+void print_format_truncated(const char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
     vsprintf(buffer, format, args);
     va_end(args);
     
-    print_truncated(buffer, max_length);
+    print_truncated(buffer, SCREEN_COLS - 1);
 }
 
 /**
@@ -240,31 +240,29 @@ void show_calculation_result(CalculationResult* result) {
     draw_header();
     
     // Show the expression and result
-    print_format_truncated(SCREEN_COLS, "Expr: %s", current_expression);
-    
-    print_format("Ans: %s", result->formatted_result);
+    print_format_truncated("Expr : %s", current_expression);
+    print_format_truncated("Ans  : %s", result->formatted_result);
+    print_format_truncated("Steps: %d", result->step_count);
     
     draw_horizontal_line('-');
+    os_SetCursorPos(6, 0);
     
     // Only proceed with steps if we have any
     if (result->step_count > 1) {
-        // Show calculation steps heading
-        print_format("Steps (%d):", result->step_count);
-        
         // Ensure step_scroll_position is within bounds
         if (step_scroll_position > result->step_count - 1) {
-            step_scroll_position = result->step_count - 1;
+            step_scroll_position = 0;
         }
         if (step_scroll_position < 0) {
-            step_scroll_position = 0;
+            step_scroll_position = result->step_count - 1;
         }
         
         // Display the current step
         if (step_scroll_position < result->step_count) {
-            print_format("%d. ", step_scroll_position + 1);
-            
-            // Show a simplified step
-            print_format_truncated(SCREEN_COLS, "%s", result->steps[step_scroll_position].expression);
+            print_format_truncated("%d. %s = %s", 
+                (step_scroll_position + 1), 
+                result->steps[step_scroll_position].expression, 
+                result->steps[step_scroll_position].result);
         }
     }
     
@@ -509,13 +507,13 @@ void run_calculator_ui(void) {
                         // MODE key - go back to input
                         current_state = STATE_INPUT;
                         break;
-                    } else if (kb_Data[3] & kb_Up) {
+                    } else if (kb_Data[7] & kb_Up) {
                         // Up key - scroll steps up
                         if (step_scroll_position > 0) {
                             step_scroll_position--;
                         }
                         break;
-                    } else if (kb_Data[3] & kb_Down) {
+                    } else if (kb_Data[7] & kb_Down) {
                         // Down key - scroll steps down
                         if (step_scroll_position < current_result.step_count - 1) {
                             step_scroll_position++;
