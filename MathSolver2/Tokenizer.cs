@@ -7,6 +7,7 @@ namespace MathSolver2;
 /// </summary>
 public enum TokenType
 {
+    None,
     /// <summary>Represents a numeric value.</summary>
     Number,
     /// <summary>Represents a variable or identifier.</summary>
@@ -63,6 +64,8 @@ public class Token
     /// <summary>Gets the position of the token in the input.</summary>
     public SourcePosition Position { get; }
 
+    public readonly static Token None = new Token(TokenType.None, "", new SourcePosition(0, 0, 0, 0));
+
     /// <summary>
     /// Initializes a new instance of the <see cref="Token"/> class.
     /// </summary>
@@ -74,6 +77,7 @@ public class Token
         Type = type;
         Value = value;
         Position = position;
+        Console.WriteLine($"Token: {Type} {Value} at {Position}");
     }
 
     /// <summary>
@@ -216,6 +220,14 @@ public class Tokenizer
             case '!':
                 MoveNext();
                 return new Token(TokenType.Factorial, "!",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '_':
+                MoveNext();
+                return new Token(TokenType.Underscore, "_",
+                    new SourcePosition(startPosition, _position, startLine, startColumn));
+            case '=':
+                MoveNext();
+                return new Token(TokenType.Equals, "=",
                     new SourcePosition(startPosition, _position, startLine, startColumn));
             default:
                 MoveNext(); // Consume the character even if it's not recognized

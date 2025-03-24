@@ -22,7 +22,7 @@ public enum OutputFormat
 /// <summary>
 /// Formats an expression tree as a string.
 /// </summary>
-public class FormattingVisitor : IExpressionVisitor<string>
+public class FormattingVisitor : ILatexExpressionVisitor<string>
 {
     private readonly OutputFormat _format;
 
@@ -271,5 +271,21 @@ public class FormattingVisitor : IExpressionVisitor<string>
         }
 
         return 0;
+    }
+
+    public string VisitSummation(SummationNode node)
+    {
+        var start = node.Start.Accept(this);
+        var end = node.End.Accept(this);
+        var expr = node.Expression.Accept(this);
+        return $"SUM [{node.Variable} = {start} to {end}] of ( {expr} )";
+    }
+
+    public string VisitProduct(ProductNode node)
+    {
+        var start = node.Start.Accept(this);
+        var end = node.End.Accept(this);
+        var expr = node.Expression.Accept(this);
+        return $"PRODUCT [{node.Variable} = {start} to {end}] of ( {expr} )";
     }
 }

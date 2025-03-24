@@ -9,7 +9,7 @@ public class ExpressionParser
 {
     private readonly Tokenizer _tokenizer;
     private readonly Dictionary<string, Func<SourcePosition, IExpressionNode>> _latexCommandHandlers;
-    private Token? _currentToken;
+    private Token _currentToken = Token.None;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ExpressionParser"/> class with the given input string.
@@ -131,7 +131,7 @@ public class ExpressionParser
     }
 
     /// <summary>
-    /// Parses a factor, handling exponentiation.
+    /// Parses a factor, handling exponentiation and fractal.
     /// </summary>
     /// <returns>The parsed factor node.</returns>
     private IExpressionNode ParseFactor()
@@ -151,6 +151,19 @@ public class ExpressionParser
                 ((ExpressionNode)right).Position.EndIndex,
                 operatorToken.Position.Line,
                 operatorToken.Position.Column);
+        }
+        else if (_currentToken.Type == TokenType.Factorial)
+        {
+            var operatorToken = _currentToken;
+            NextToken();
+            left = new FactorialNode(left);
+
+            ((ExpressionNode)left).Position = new SourcePosition(
+                ((ExpressionNode)left).Position.StartIndex,
+                operatorToken.Position.EndIndex,
+                operatorToken.Position.Line,
+                operatorToken.Position.Column);
+
         }
 
         return left;

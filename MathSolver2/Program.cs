@@ -9,20 +9,13 @@ class Program
         Console.WriteLine("======================================");
 
         // Create a basic expression to test
-        string expression = @"(.000125+30.78666-.080945)+(.855^2-.75/8)^3";
+        string expression = @"(-.05)*1.25*2.75+.00306*(-.00129)*4+.000309*.803*.935-.000309*1.25*4-(-.00129)*.935*(-.05)-2.75*.00306*.803";
         Console.WriteLine($"Expression: {expression}");
         Console.WriteLine();
 
-        Console.WriteLine((.000125 + 30.78666 - .080945) + Math.Pow((Math.Pow(.855, 2) - .75 / 8) , 3));
-
         // Test with Normal arithmetic (no formatting)
         Console.WriteLine("Normal Arithmetic:");
-        DemoArithmeticMode(expression, ArithmeticType.Truncate, 4, false);
-        Console.WriteLine();
-
-        // Test with Round to significant digits
-        Console.WriteLine("Round to 3 Significant Digits:");
-        DemoArithmeticMode(expression, ArithmeticType.Round, 3, true);
+        DemoArithmeticMode(expression, ArithmeticType.Normal, 9, true);
         Console.WriteLine();
 
         Console.WriteLine("\nDemo complete!");
