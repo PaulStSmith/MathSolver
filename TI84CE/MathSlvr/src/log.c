@@ -128,7 +128,7 @@
         log_message("(%s) Token identified: Type=%s, Value=%s", source, get_token_type(type), value);
  }
  
- void log_char_token(const char* source, int type, const char value) {
+ void log_token_char(const char* source, int type, const char value) {
     if (type == TOKEN_NONE) {
         log_message("(%s) Token not identified: '%s' (0x%x)", source, value, value);
     }

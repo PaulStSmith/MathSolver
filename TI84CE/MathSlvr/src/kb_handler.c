@@ -16,6 +16,7 @@ typedef struct {
         KBPressCallback press;      /**< Function pointer for press callback. */
         KBReleaseCallback release;  /**< Function pointer for release callback. */
         KBHoldCallback hold;        /**< Function pointer for hold callback. */
+        void (*any_press)(CombinedKey key); /**< Function pointer for any key press callback. */
     } callback;
     bool was_pressed;               /**< Previous state of the key for edge detection. */
     unsigned long press_time;       /**< Time when the key was first pressed (for hold detection). */
@@ -23,12 +24,26 @@ typedef struct {
     bool hold_repeat;               /**< Whether the hold event should repeat. */
     int hold_interval;              /**< Interval between hold events when repeating (in ms). */
     unsigned long last_hold_time;   /**< Time of the last hold event. */
+    bool is_any_key;                /**< Whether this is a callback for any key. */
 } CallbackEntry;
 
 // Static state variables
 static CallbackEntry callbacks[KB_MAX_CALLBACKS];   /**< Array of callback entries. */
 static int next_callback_id = 1;                    /**< Next available callback ID (starts at 1). */
 static bool initialized = false;                    /**< Whether the keyboard handler has been initialized. */
+static CombinedKey last_key_pressed = 0;            /**< The last key that was pressed. */
+
+/**
+ * Checks if a specific key is pressed
+ * 
+ * @param combined_key One of the KEY_* constants
+ * @return true if the key is pressed, false otherwise
+ */
+bool kb_is_key_pressed(CombinedKey combined_key) {
+    int group = KEY_GROUP(combined_key);
+    int mask = KEY_MASK(combined_key);
+    return (kb_Data[group] & mask) ? true : false;
+}
 
 /**
  * Initializes the keyboard handler.
@@ -43,6 +58,7 @@ void kb_init(void) {
     }
 
     next_callback_id = 1;
+    last_key_pressed = 0;
     initialized = true;
 }
 
@@ -85,6 +101,39 @@ KBCallbackID kb_register_hold(CombinedKey key, KBHoldCallback callback,
 }
 
 /**
+ * Registers a callback for any key press.
+ * 
+ * @param callback The function to call when any key is pressed.
+ * @return The ID of the registered callback, or -1 if registration failed.
+ */
+KBCallbackID kb_register_any_press(void (*callback)(CombinedKey key)) {
+    if (!initialized) kb_init();
+
+    // Find an empty slot
+    int slot = -1;
+    for (int i = 0; i < KB_MAX_CALLBACKS; i++) {
+        if (!callbacks[i].active) {
+            slot = i;
+            break;
+        }
+    }
+
+    // If no slot available, return error
+    if (slot < 0) return -1;
+
+    // Set up the callback entry
+    callbacks[slot].active = true;
+    callbacks[slot].id = next_callback_id++;
+    callbacks[slot].key = 0; // Not used for any-key callbacks
+    callbacks[slot].type = CB_PRESS;
+    callbacks[slot].is_any_key = true;
+    callbacks[slot].callback.any_press = callback;
+    callbacks[slot].was_pressed = false;
+
+    return callbacks[slot].id;
+}
+
+/**
  * Unregisters a callback by its ID.
  * 
  * @param callback_id The ID of the callback to unregister.
@@ -114,7 +163,7 @@ int kb_unregister(CombinedKey key) {
 
     int count = 0;
     for (int i = 0; i < KB_MAX_CALLBACKS; i++) {
-        if (callbacks[i].active && callbacks[i].key == key) {
+        if (callbacks[i].active && !callbacks[i].is_any_key && callbacks[i].key == key) {
             callbacks[i].active = false;
             count++;
         }
@@ -135,6 +184,22 @@ void kb_clear(void) {
 }
 
 /**
+ * Gets the last key that was pressed.
+ * 
+ * @return The last key that was pressed, or 0 if no key has been pressed.
+ */
+CombinedKey kb_get_last_key(void) {
+    return last_key_pressed;
+}
+
+/**
+ * Clears the last key pressed.
+ */
+void kb_clear_last_key(void) {
+    last_key_pressed = 0;
+}
+
+/**
  * Processes keyboard events and triggers callbacks as necessary.
  */
 void kb_process(void) {
@@ -146,12 +211,58 @@ void kb_process(void) {
     // Scan keyboard once
     kb_Scan();
 
+    // Check for any keys being pressed for the first time
+    // Iterate through all possible keys to check if any were just pressed
+    for (int group = 1; group <= 7; group++) {
+        // Get the current and previous state of this group
+        uint8_t group_state = kb_Data[group];
+        
+        // Skip if no keys in this group are pressed
+        if (!group_state) continue;
+        
+        // Check each bit in the group
+        for (int bit = 0; bit < 8; bit++) {
+            uint8_t mask = 1 << bit;
+            
+            // Skip if this key is not pressed
+            if (!(group_state & mask)) continue;
+            
+            // Create the combined key value
+            CombinedKey current_key = MAKE_KEY(group, mask);
+            
+            // Store as the last key pressed
+            last_key_pressed = current_key;
+            
+            // Trigger any-key callbacks if the key was just pressed
+            for (int i = 0; i < KB_MAX_CALLBACKS; i++) {
+                if (callbacks[i].active && callbacks[i].is_any_key) {
+                    // Check if the key was previously not pressed
+                    bool was_any_pressed = false;
+                    for (int g = 1; g <= 7; g++) {
+                        if (kb_Data[g]) {
+                            was_any_pressed = true;
+                            break;
+                        }
+                    }
+                    
+                    // If this is a new key press, call the any-key callback
+                    if (!was_any_pressed) {
+                        callbacks[i].callback.any_press(current_key);
+                    }
+                }
+            }
+            
+            // Since we found a pressed key, we can exit the loop
+            break;
+        }
+    }
+
     // Process each active callback
     for (int i = 0; i < KB_MAX_CALLBACKS; i++) {
-        if (!callbacks[i].active) continue;
+        if (!callbacks[i].active || callbacks[i].is_any_key) continue;
 
         CallbackEntry* cb = &callbacks[i];
-        bool is_pressed = is_key_pressed(cb->key);
+        bool is_pressed = kb_is_key_pressed(cb->key);
 
         // Process based on callback type
         switch (cb->type) {
@@ -202,6 +313,20 @@ void kb_process(void) {
 }
 
 /**
+ * Waits for a key to be pressed and released.
+ */
+void kb_wait_any(void) {
+    while (!kb_AnyKey()) {
+        kb_Scan();
+        delay(50);
+    }
+    while (kb_AnyKey()) {
+        kb_Scan();
+        delay(50);
+    }
+}
+
+/**
  * Registers a callback internally.
  * 
  * @param key The key to associate with the callback.
@@ -233,6 +358,7 @@ static KBCallbackID register_callback(CombinedKey key, CallbackType type, void* 
     callbacks[slot].id = next_callback_id++;
     callbacks[slot].key = key;
     callbacks[slot].type = type;
+    callbacks[slot].is_any_key = false;
 
     // Set the appropriate callback function
     switch (type) {

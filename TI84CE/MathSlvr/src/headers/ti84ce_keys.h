@@ -23,6 +23,9 @@
 
 // Combined key definitions
 typedef enum {
+    // No key pressed
+    KEY_NONE     = MAKE_KEY(0, 0),
+
     // Group 1
     KEY_GRAPH    = MAKE_KEY(1, kb_Graph),
     KEY_TRACE    = MAKE_KEY(1, kb_Trace),
@@ -86,39 +89,5 @@ typedef enum {
     KEY_RIGHT    = MAKE_KEY(7, kb_Right),
     KEY_UP       = MAKE_KEY(7, kb_Up)
 } CombinedKey;
-
-/**
- * Checks if a specific key is pressed
- * 
- * @param combined_key One of the KEY_* constants
- * @return true if the key is pressed, false otherwise
- */
-static inline bool is_key_pressed(CombinedKey combined_key) {
-    int group = KEY_GROUP(combined_key);
-    int mask = KEY_MASK(combined_key);
-    return (kb_Data[group] & mask) ? true : false;
-}
-
-/**
- * Waits until a specific key is pressed
- * 
- * @param combined_key One of the KEY_* constants
- */
-static inline void wait_for_key_press(CombinedKey combined_key) {
-    do {
-        kb_Scan();
-    } while (!is_key_pressed(combined_key));
-}
-
-/**
- * Waits until a specific key is released
- * 
- * @param combined_key One of the KEY_* constants
- */
-static inline void wait_for_key_release(CombinedKey combined_key) {
-    do {
-        kb_Scan();
-    } while (is_key_pressed(combined_key));
-}
 
 #endif // TI84CE_KEYS_H

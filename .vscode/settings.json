@@ -3,6 +3,8 @@
         "mathsolver.h": "c",
         "mathsolver_private.h": "c",
         "arithmetic_public.h": "c",
-        "keypadc.h": "c"
+        "keypadc.h": "c",
+        "ti84ce_keys.h": "c",
+        "ui_private.h": "c"
     }
 }

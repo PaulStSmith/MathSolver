@@ -21,8 +21,6 @@ bool current_use_significant_digits = false;
  */
 static ExpressionNode node_pool[MAX_NODES];
 
-/* ============================== Initialization and Cleanup ============================== */
-
 /**
  * Initializes the math solver.
  * Resets the node pool and variable list to their initial states.

@@ -38,6 +38,10 @@ int get_precision(void) {
     return current_precision;
 }
 
+void set_precision(int precision) {
+    current_precision = precision;
+}
+
 /**
  * Gets whether significant digits are used.
  * 
@@ -84,19 +88,11 @@ static double round_to_significant_digits(double value, int sig_digits) {
         return 0.0;
     }
     
-    // Get the exponent (power of 10) of the value
-    int exponent = (int)floor(log10(fabs(value)));
-    
-    // Calculate the number of decimal places needed
-    int decimal_places = sig_digits - exponent - 1;
-    
-    // Adjust for small numbers (value < 1)
-    if (fabs(value) < 1 && value != 0) {
-        decimal_places = sig_digits + abs(exponent) - 1;
-    }
-    
-    double multiplier = pow(10.0, decimal_places);
-    return round(value * multiplier) / multiplier;
+    // Use rounding logic
+    double magnitude = pow(10, floor(log10(fabs(value))));
+    double scaled_value = value / magnitude;
+    double rounded_value = round(scaled_value * pow(10, sig_digits)) / pow(10, sig_digits);
+    return rounded_value * magnitude;
 }
 
 /**
@@ -107,6 +103,8 @@ static double round_to_significant_digits(double value, int sig_digits) {
  * @return The truncated value.
  */
 static double truncate_to_significant_digits(double value, int sig_digits) {
+    log_message("Truncating %.6f to %d significant digits", value, sig_digits);
+
     if (sig_digits <= 0) {
         sig_digits = 1;
     }
@@ -115,26 +113,42 @@ static double truncate_to_significant_digits(double value, int sig_digits) {
         return 0.0;
     }
 
-    // Get the exponent (power of 10) of the value
-    int exponent = (int)floor(log10(fabs(value)));
-
-    // Calculate the number of decimal places needed
-    int decimal_places = sig_digits - exponent - 1;
-
-    // Adjust for small numbers (value < 1)
-    if (fabs(value) < 1 && value != 0) {
-        decimal_places = sig_digits + abs(exponent) - 1;
+    // Determine the order of magnitude using integer arithmetic
+    double magnitude = 1.0;
+    while (fabs(value) >= 10.0) {
+        value /= 10.0;
+        magnitude *= 10.0;
     }
+    while (fabs(value) < 1.0) {
+        value *= 10.0;
+        magnitude /= 10.0;
+    }
+    log_message("Magnitude: %.6f", magnitude);
 
-    // Calculate the multiplier for truncation
-    double multiplier = pow(10.0, decimal_places);
+    // Calculate the multiplier using integer arithmetic
+    double multiplier = 1.0;
+    for (int i = 1; i < sig_digits; i++) {
+        multiplier *= 10.0;
+    }
+    log_message("Multiplier: %.6f", multiplier);
 
-    // Truncate the value
-    if (value >= 0) {
-        return floor(value * multiplier) / multiplier;
+    // Scale the number to the desired precision
+    double scaled_value = value * multiplier;
+    log_message("Scaled value: %.6f", scaled_value);
+
+    // Truncate to the desired number of significant digits
+    double truncated_value;
+    if (scaled_value < 0) {
+        truncated_value = ceil(scaled_value) / multiplier;
     } else {
-        return ceil(value * multiplier) / multiplier;
+        truncated_value = floor(scaled_value) / multiplier;
     }
+
+    // Scale back to the original magnitude
+    double result = truncated_value * magnitude;
+
+    log_message("Final truncated value: %.6f", result);
+    return result;
 }
 
 /**

@@ -6,6 +6,16 @@
 
 /* ============================== Expression Evaluation ============================== */
 
+/*
+ *  ___                        _            ___          _           _   _          
+ * | __|_ ___ __ _ _ ___ _____(_)___ _ _   | __|_ ____ _| |_  _ __ _| |_(_)___ _ _  
+ * | _|\ \ / '_ \ '_/ -_|_-<_-< / _ \ ' \  | _|\ V / _` | | || / _` |  _| / _ \ ' \ 
+ * |___/_\_\ .__/_| \___/__/__/_\___/_||_| |___|\_/\__,_|_|\_,_\__,_|\__|_\___/_||_|
+ *         |_|                                                                      
+ * 
+ * The following functions are used to evaluate mathematical expressions.
+ */
+
 /**
  * Evaluates an expression node.
  * 
@@ -19,19 +29,23 @@ double evaluate_expression(ExpressionNode* node) {
     }
     
     switch (node->type) {
-        case NODE_NUMBER:
-            log_message("Evaluating number: %.6f", node->number_value);
-            return node->number_value;
+        case NODE_NUMBER: {
+            double value = node->number_value;
+            double result = apply_arithmetic_format(value);
+            log_message("Evaluating number: %.6f -> %.6f", value, result);
+            return result;
+        }
         
         case NODE_VARIABLE: {
             bool found;
             double value = get_variable(node->variable.name, &found);
+            double result = apply_arithmetic_format(value);
             if (!found) {
                 log_error("Undefined variable");
             } else {
-                log_message("Variable evaluated: %s = %.6f", node->variable.name, value);
+                log_message("Variable evaluated: %s = %.6f -> %.6f", node->variable.name, value, result);
             }
-            return value;
+            return result;
         }
         
         case NODE_ADDITION: {
@@ -126,6 +140,7 @@ double evaluate_expression(ExpressionNode* node) {
  * @return True if the evaluation is successful, false otherwise.
  */
 bool evaluate_expression_string(const char* input, CalculationResult* result) {
+    log_message("Beginning expression evaluation.");
     // Parse the expression
     ExpressionNode* root = parse_expression_string(input);
     if (root == NULL) return false;
@@ -145,6 +160,52 @@ bool evaluate_expression_string(const char* input, CalculationResult* result) {
     return true;
 }
 
+char* node_to_string(ExpressionNode* node) {
+    static char buffer[MAX_INPUT_LENGTH];
+    switch (node->type) {
+        case NODE_NUMBER:
+            sprintf(buffer, "%.6f", node->number_value);
+            break;
+        case NODE_VARIABLE:
+            sprintf(buffer, "%s", node->variable.name);
+            break;
+        case NODE_ADDITION:
+            sprintf(buffer, "(%s + %s)", node_to_string(node->binary_op.left), node_to_string(node->binary_op.right));
+            break;
+        case NODE_SUBTRACTION:
+            sprintf(buffer, "(%s - %s)", node_to_string(node->binary_op.left), node_to_string(node->binary_op.right));
+            break;
+        case NODE_MULTIPLICATION:
+            sprintf(buffer, "(%s * %s)", node_to_string(node->binary_op.left), node_to_string(node->binary_op.right));
+            break;
+        case NODE_DIVISION:
+            sprintf(buffer, "(%s / %s)", node_to_string(node->binary_op.left), node_to_string(node->binary_op.right));
+            break;
+        case NODE_EXPONENT:
+            sprintf(buffer, "(%s ^ %s)", node_to_string(node->binary_op.left), node_to_string(node->binary_op.right));
+            break;
+        case NODE_FUNCTION:
+            sprintf(buffer, "%s(%s)", get_function_name(node->function.func_type), node_to_string(node->function.argument));
+            break;
+        case NODE_FACTORIAL:
+            sprintf(buffer, "%s!", node_to_string(node->factorial.expression));
+            break;
+        case NODE_PARENTHESIS:
+            sprintf(buffer, "(%s)", node_to_string(node->parenthesis.expression));
+            break;
+        default:
+            sprintf(buffer, "Unknown node type");
+            break;
+    }
+    return buffer;
+}
+
+char* result_to_string(CalculationResult* result) {
+    static char buffer[MAX_INPUT_LENGTH];
+    sprintf(buffer, "Value: %.6f, Step: %d, Result: %s", result->value, result->step_count, result->formatted_result);
+    return buffer;
+}
+
 /**
  * Evaluates an expression with step-by-step tracking.
  * 
@@ -153,12 +214,21 @@ bool evaluate_expression_string(const char* input, CalculationResult* result) {
  * @return The result of the evaluation.
  */
 double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
+
+    log_debug("Evaluating expression with steps.");
+    log_message("Node: %s", node_to_string(node));
+    log_message("Result: %s", result_to_string(result));    
+
     if (node == NULL) return 0;
     
     switch (node->type) {
-        case NODE_NUMBER:
+        case NODE_NUMBER: {
+            double value = node->number_value;
+            double rst = apply_arithmetic_format(value);
+            log_operation("Number", rst);
             // No step needed for a simple number
-            return node->number_value;
+            return rst;
+        }
         
         case NODE_VARIABLE: {
             bool found;
@@ -403,6 +473,21 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
     }
 }
 
+/*
+ *  ___             _   _            ___          _           _   _          
+ * | __|  _ _ _  __| |_(_)___ _ _   | __|_ ____ _| |_  _ __ _| |_(_)___ _ _  
+ * | _| || | ' \/ _|  _| / _ \ ' \  | _|\ V / _` | | || / _` |  _| / _ \ ' \ 
+ * |_| \_,_|_||_\__|\__|_\___/_||_| |___|\_/\__,_|_|\_,_\__,_|\__|_\___/_||_|
+ *                                                                           
+ * The following functions are used to evaluate mathematical functions.
+ */
+
+/**
+ * Retrieves the name of a mathematical function based on its type.
+ * 
+ * @param func_type The type of the function.
+ * @return The name of the function as a string.
+ */
 static const char* get_function_name(FunctionType func_type) {
     switch (func_type) {
         case FUNC_SIN:  return "sin";

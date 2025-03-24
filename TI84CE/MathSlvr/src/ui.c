@@ -11,8 +11,8 @@
 #include <string.h>
 #include <stdio.h>
 #include <ti/screen.h>
+#include "headers/kb_handler.h"
 #include "headers/mathsolver.h"
-#include "headers/ui.h"
 #include "headers/ui_private.h"
 
 /* ============================== State Variables ============================== */
@@ -24,7 +24,6 @@ typedef enum {
     STATE_INPUT,    /**< Input state where the user enters expressions. */
     STATE_RESULT,   /**< Result state where the calculation result is displayed. */
     STATE_ERROR,    /**< Error state where error messages are shown. */
-    STATE_HELP,     /**< Help state displaying usage instructions. */
     STATE_SETTINGS  /**< Settings state for configuring calculator options. */
 } CalculatorState;
 
@@ -46,11 +45,24 @@ static int step_scroll_position = 0;
 /** Flag indicating whether to show detailed calculation steps. */
 static bool show_step_details = false;
 
+/** Flag indicating whether the calculator is running. */
+static bool running = true;
+
+/** Flag indicating whether the calculator is waiting for input. */
+static bool waiting = false;
+
 /** TI-84 CE screen dimensions. */
-#define SCREEN_ROWS 8     /**< Number of rows on the screen (0-7). */
+#define SCREEN_ROWS 9     /**< Number of rows on the screen (0-8). */
 #define SCREEN_COLS 26    /**< Number of columns on the screen (0-25). */
 
-/* ============================== Text UI Utilities ============================== */
+/*
+ *  _____        _     _   _ ___   _   _ _   _ _ _ _   _        
+ * |_   _|____ _| |_  | | | |_ _| | | | | |_(_) (_) |_(_)___ ___
+ *   | |/ -_) \ /  _| | |_| || |  | |_| |  _| | | |  _| / -_|_-<
+ *   |_|\___/_\_\\__|  \___/|___|  \___/ \__|_|_|_|\__|_\___/__/
+ *
+ * Utility functions for rendering text and formatting output on the screen.
+ */
 
 /**
  * Clears the screen and resets the cursor to the home position.
@@ -88,24 +100,40 @@ void println(const char* str) {
 }
 
 /**
- * Prints a string at the last row of the screen.
+ * Prints a string centered at the last row of the screen.
  * 
  * @param str The string to print.
  */
 void print_footer(char* str) {
-    os_SetCursorPos(SCREEN_ROWS + 1, 0);
-    print(str);
+    os_SetCursorPos(SCREEN_ROWS, 0);
+    print_format("%*s", SCREEN_COLS - 2, "");
+    os_SetCursorPos(SCREEN_ROWS, 0);
+    print_centered(str);
 }
 
 /**
- * Centers a string on the screen.
+ * Prints a string centered on the screen.
  * 
  * @param text The string to center.
  */
 void print_centered(const char* str) {
     int len = strlen(str);
+    int padL = (SCREEN_COLS - len) / 2;
+    int padR = SCREEN_COLS - padL - len - 1;
+    padL = (padL < 0) ? 0 : padL;
+    padR = (padR < 0) ? 0 : padR;
+    print_format("%*s%s%-*s", padL, "", str, padR, "");
+}
+
+/**
+ * Prints a string centered on the screen, followed by a newline character.
+ * 
+ * @param str The string to center.
+ */
+void print_centeredln(const char* str) {
+    int len = strlen(str);
     int padding = (SCREEN_COLS - len) / 2;
-    print_format("%*s%s", padding, "", str);
+    print_formatln("%*s%s", padding, "", str);
 }
 
 /**
@@ -124,17 +152,13 @@ void print_truncated(const char* str, int max_length) {
     if ((int)strlen(str) <= max_length) {
         strncpy(buffer, str, max_length);
         buffer[max_length] = '\0';
-        os_PutStrFull(buffer);
     } else {
         // Truncate with ellipsis
-        strncpy(buffer, str, max_length - 3);
-        buffer[max_length - 3] = '.';
-        buffer[max_length - 2] = '.';
-        buffer[max_length - 1] = '.';
+        strncpy(buffer, str, max_length - 1);
+        buffer[max_length - 1] = '\xCE'; // Ellipsis character
         buffer[max_length] = '\0';
-        os_PutStrFull(buffer);
     }
-    new_line();
+    println(buffer);
 }
 
 /**
@@ -149,7 +173,23 @@ void print_format(const char* format, ...) {
     va_start(args, format);
     vsprintf(buffer, format, args);
     va_end(args);
-    
+   
+    print(buffer);
+}
+
+/**
+ * Prints a formatted string to the screen, followed by a newline character.
+ * 
+ * @param format The format string to print.
+ * @param ... Additional arguments to format.
+ */
+void print_formatln(const char* format, ...) {
+    char buffer[255];
+    va_list args;
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    va_end(args);
+   
     println(buffer);
 }
 
@@ -191,19 +231,29 @@ void print_format_truncated(const char* format, ...) {
  * 
  * @param line_char The character to use for the horizontal line.
  */
-static void draw_horizontal_line(char line_char) {
+static void draw_horizontal_line(void) {
+
+    unsigned int curRow;
+    unsigned int curCol;
     char line[SCREEN_COLS + 1];
+
+    os_GetCursorPos(&curRow, &curCol);
+    os_SetCursorPos(curRow, 0);
     
-    // Fill the line with the specified character
-    for (int i = 0; i < SCREEN_COLS; i++) {
-        line[i] = line_char;
-    }
-    line[SCREEN_COLS] = '\0';
-    
-    println(line);
+    memset(line, '-', SCREEN_COLS); // Fill the buffer with dashes
+    line[SCREEN_COLS] = '\0';      // Null-terminate the string
+    print(line);
 }
 
-/* ============================== UI Drawing Functions ============================== */
+/*
+ *  _   _ ___   ___                  _             ___             _   _             
+ * | | | |_ _| |   \ _ _ __ ___ __ _(_)_ _  __ _  | __|  _ _ _  __| |_(_)___ _ _  ___
+ * | |_| || |  | |) | '_/ _` \ V  V / | ' \/ _` | | _| || | ' \/ _|  _| / _ \ ' \(_-<
+ *  \___/|___| |___/|_| \__,_|\_/\_/|_|_||_\__, | |_| \_,_|_||_\__|\__|_\___/_||_/__/
+ *                                         |___/                                     
+ * 
+ * Functions for rendering different sections of the calculator UI.
+ */
 
 /**
  * Draws the header section of the calculator UI.
@@ -211,7 +261,8 @@ static void draw_horizontal_line(char line_char) {
 void draw_header(void) {
     clear_screen();
     print_centered("MathSolver TI-84 CE");
-    draw_horizontal_line('-');
+    println("");
+    draw_horizontal_line();
     os_SetCursorPos(2,0);
 }
 
@@ -226,14 +277,14 @@ void show_input_prompt(void) {
     int precision       = get_precision();
     bool use_sig_digits = get_use_significant_digits();
     
-    print_format("Mode: %s", 
+    print_formatln("Mode: %s", 
                     mode == ARITHMETIC_NORMAL ? "Normal" : 
                     mode == ARITHMETIC_TRUNCATE ? "Truncate" : "Round");
     
     if (mode == ARITHMETIC_NORMAL)
         println("Prec: Default");
     else
-        print_format("Prec: %d %s", 
+        print_formatln("Prec: %d %s", 
                 precision,
                 use_sig_digits ? "sig" : "dec");
 
@@ -252,10 +303,11 @@ void show_calculation_result(CalculationResult* result) {
     // Show the expression and result
     print_format_truncated("Expr : %s", current_expression);
     print_format_truncated("Ans  : %s", result->formatted_result);
+    print_format_truncated("Mode : %s", get_mode_str());
     print_format_truncated("Steps: %d", result->step_count);
     
-    draw_horizontal_line('-');
-    os_SetCursorPos(6, 0);
+    draw_horizontal_line();
+    os_SetCursorPos(7, 0);
     
     // Only proceed with steps if we have any
     if (result->step_count > 1) {
@@ -277,7 +329,7 @@ void show_calculation_result(CalculationResult* result) {
     }
     
     // Navigation hints
-    print_footer("<MODE>:Input <CLEAR>:Exit");
+    print_footer("<MODE>:Input <CLEAR>:exit");
 }
 
 /**
@@ -287,64 +339,80 @@ void show_calculation_result(CalculationResult* result) {
  */
 void show_error_message(const char* message) {
     draw_header();
-    
-    os_PutStrFull("ERROR:");
-    new_line();
-    
-    // Print the error message, limited to one line for simplicity
-    print_truncated(message, SCREEN_COLS);
-    
-    new_line();
-    new_line();
-    
-    os_PutStrFull("Press any key to continue");
-}
-
-/**
- * Displays the help screen with usage instructions.
- */
-void show_help_screen(void) {
-    draw_header();
-    
-    print_centered("Help");
-    new_line();
-    
-    os_PutStrFull("Operators: +,-,*,/,^,!");
-    new_line();
-    
-    os_PutStrFull("Functions: sin,cos,tan");
-    new_line();
-    
-    os_PutStrFull("Constants: pi,e,phi");
-    new_line();
-    
-    new_line();
-    os_PutStrFull("Press any key to return");
+    println("ERROR:");
+    println(message);
+    print_footer("Press any key\xCE"); // \xCE - Ellipsis character
+    kb_wait_any();
 }
 
 /**
  * Displays the settings menu for configuring calculator options.
  */
 void show_settings_menu(void) {
-    ArithmeticType mode = get_arithmetic_mode();
-    int precision = get_precision();
-    bool use_sig_digits = get_use_significant_digits();
-    
     draw_header();
-    
     print_centered("Settings");
-    
-    // Display current settings
-    print_format("1. Mode: %s", 
-                    mode == ARITHMETIC_NORMAL ? "Normal" : 
-                    mode == ARITHMETIC_TRUNCATE ? "Truncate" : "Round");
-    print_format("2. Precision: %d", precision);
-    print_format("3. Type: %s", use_sig_digits ? "Sig.Digits" : "Dec.Places");
-    
-    print_footer("<MODE>:Input <1-3>:Change");
+    print_mode();
+    print_precision();
+    print_precision_type();
 }
 
-/* ============================== Input Handling ============================== */
+/**
+ * Prints the current arithmetic mode.
+ */
+void print_mode(void){
+    ArithmeticType mode = get_arithmetic_mode();
+
+    os_SetCursorPos(4, 0);
+    print_formatln("1. Mode: %s", 
+        mode == ARITHMETIC_NORMAL ?   "Normal   " : 
+        mode == ARITHMETIC_TRUNCATE ? "Truncate " : 
+                                      "Round    ");
+}
+
+/**
+ * Prints the current precision setting.
+ */
+void print_precision(void) {
+    ArithmeticType mode = get_arithmetic_mode();
+    int precision = get_precision();
+
+    os_SetCursorPos(5, 0);
+    if (mode == ARITHMETIC_NORMAL)
+        print_formatln("2. Precision: Default");
+    else
+        print_formatln("2. Precision: %-*d  ", 8, precision);
+}
+
+/**
+ * Prints the type of precision (significant digits or decimal places).
+ */
+void print_precision_type(void) {
+    ArithmeticType mode = get_arithmetic_mode();
+    bool use_sig_digits = get_use_significant_digits();
+
+    os_SetCursorPos(6, 0);
+    if (mode == ARITHMETIC_NORMAL)
+        print_formatln("3. Type: %-*s", 10, "N/A");
+    else
+        print_formatln("3. Type: %s", use_sig_digits ? "Sig.Digits" : "Dec.Places");
+}
+
+/**
+ * Displays a footer for selecting precision.
+ */
+void print_select_precision(void) {
+    print_footer("0-9:Change");
+}
+
+/*
+ *  ___                _     _  _              _ _ _           
+ * |_ _|_ _  _ __ _  _| |_  | || |__ _ _ _  __| | (_)_ _  __ _ 
+ *  | || ' \| '_ \ || |  _| | __ / _` | ' \/ _` | | | ' \/ _` |
+ * |___|_||_| .__/\_,_|\__| |_||_\__,_|_||_\__,_|_|_|_||_\__, |
+ *          |_|                                          |___/ 
+ *
+ * Functions for handling user input and managing key events.
+ */
 
 /**
  * Gets an expression input from the user.
@@ -392,6 +460,10 @@ void toggle_arithmetic_mode(void) {
             set_arithmetic_mode(ARITHMETIC_NORMAL, get_precision(), get_use_significant_digits());
             break;
     }
+
+    print_mode();
+    print_precision();
+    print_precision_type();
 }
 
 /**
@@ -399,15 +471,19 @@ void toggle_arithmetic_mode(void) {
  * 
  * @param change The amount to adjust the precision by.
  */
-void adjust_precision(int change) {
-    int precision = get_precision();
-    precision += change;
-    
-    // Ensure precision is within reasonable bounds
-    if (precision < 0) precision = 0;
-    if (precision > 10) precision = 10;
-    
-    set_arithmetic_mode(get_arithmetic_mode(), precision, get_use_significant_digits());
+void adjust_precision(void) {
+    ArithmeticType mode = get_arithmetic_mode();
+    if (mode == ARITHMETIC_NORMAL) {
+        return;
+    }
+
+    register_precision_kb();
+
+    waiting = true;
+    while (waiting) {
+        kb_process();
+        delay(50);
+    }
 }
 
 /**
@@ -415,28 +491,31 @@ void adjust_precision(int change) {
  */
 void toggle_significant_digits(void) {
     set_arithmetic_mode(get_arithmetic_mode(), get_precision(), !get_use_significant_digits());
+    print_precision_type();
 }
 
-/* ============================== Main UI Function ============================== */
-
-void WaitForKeyDown(void) {
-    while (!kb_AnyKey()) {
-        kb_Scan();
-        delay(50);
-    }
+/**
+ * Sets the calculator state to input mode.
+ */
+void input_state(void) {
+    current_state = STATE_INPUT;
 }
 
-void WaitForKeyRelease(void) {
-    while (kb_AnyKey()) {
-        kb_Scan();
-        delay(50);
-    }
+/**
+ * Exits the calculator UI.
+ */
+void leave(void) {
+    running = false;
 }
 
-void WaitForKeyPress(void) {
-    WaitForKeyDown();
-    WaitForKeyRelease();
-}
+/*
+ *  __  __      _        _   _ ___   ___             _   _          
+ * |  \/  |__ _(_)_ _   | | | |_ _| | __|  _ _ _  __| |_(_)___ _ _  
+ * | |\/| / _` | | ' \  | |_| || |  | _| || | ' \/ _|  _| / _ \ ' \ 
+ * |_|  |_\__,_|_|_||_|  \___/|___| |_| \_,_|_||_\__|\__|_\___/_||_|
+ *                                                                 
+ * The main function that manages the calculator's user interface.
+ */
 
 /**
  * Main function that runs the calculator's user interface.
@@ -445,7 +524,6 @@ void WaitForKeyPress(void) {
  * current state, and handles user input.
  */
 void run_calculator_ui(void) {
-    bool running = true;
     bool input_processed = false;
     
     // Initialize screen and keyboard
@@ -482,8 +560,7 @@ void run_calculator_ui(void) {
                             }
                         }
                     } else {
-                        // User cancelled input
-                        running = false;
+                        leave();
                     }
                 } else {
                     // Reset flag after state change
@@ -492,113 +569,168 @@ void run_calculator_ui(void) {
                 break;
                 
             case STATE_RESULT:
+                register_result_kb();
                 show_calculation_result(&current_result);
-                
-                while (true)
-                {
-                    // Handle key input for navigation
-                    kb_Scan();
-                    
-                    if (kb_Data[6] & kb_Clear) {
-                        // CLEAR key - exit
-                        running = false;
-                        break;
-                    } else if (kb_Data[1] & kb_Mode) {
-                        // MODE key - go back to input
-                        current_state = STATE_INPUT;
-                        break;
-                    } else if (kb_Data[7] & kb_Up) {
-                        // Up key - scroll steps up
-                        if (step_scroll_position > 0) {
-                            step_scroll_position--;
-                        }
-                        break;
-                    } else if (kb_Data[7] & kb_Down) {
-                        // Down key - scroll steps down
-                        if (step_scroll_position < current_result.step_count - 1) {
-                            step_scroll_position++;
-                        }
-                        break;
-                    }
+
+                while (running && current_state == STATE_RESULT) {
+                    kb_process();
+                    delay(50);
                 }
-                
-                // Wait for key release
-                delay(100);
+                kb_clear();
                 break;
                 
             case STATE_ERROR:
                 show_error_message(error_message);
-                
-                // Wait for any key press to return to input
-                WaitForKeyDown();
-                
-                // Set next state
-                current_state = STATE_INPUT;
-                
-                // Wait for key release
-                WaitForKeyRelease();
-                break;
-                
-            case STATE_HELP:
-                show_help_screen();
-                
-                // Wait for any key press to return to input
-                WaitForKeyDown();
+
+                kb_wait_any();
                 
                 // Set next state
                 current_state = STATE_INPUT;
-                
-                // Wait for key release
-                WaitForKeyRelease();
+
                 break;
                 
             case STATE_SETTINGS:
                 show_settings_menu();
-                
-                // Handle settings changes
-                kb_Scan();
-                
-                if (kb_Data[1] & kb_Mode) {
-                    // MODE key - return to input
-                    current_state = STATE_INPUT;
-                } else if (kb_Data[4] & kb_1) {
-                    // 1 key - change arithmetic mode
-                    toggle_arithmetic_mode();
-                } else if (kb_Data[4] & kb_2) {
-                    // 2 key - adjust precision
-                    adjust_precision(1);  // Just increment for simplicity
-                } else if (kb_Data[4] & kb_3) {
-                    // 3 key - toggle precision type
-                    toggle_significant_digits();
+                regiter_settings_kb();
+                while (running && current_state == STATE_SETTINGS) {
+                    kb_process();
+                    delay(50);
                 }
-                
-                // Wait for key release
-                delay(100);
+                kb_clear();
                 break;
         }
-        
-        // Check for global key combinations
-        kb_Scan();
-        
-        // Help and Settings access through ALPHA combinations
-        if (kb_Data[2] & kb_Alpha) {
-            // Check for ALPHA + 1 (Help)
-            if (kb_Data[4] & kb_1) {
-                current_state = STATE_HELP;
-            }
-            // Check for ALPHA + 2 (Settings)
-            else if (kb_Data[4] & kb_2) {
-                current_state = STATE_SETTINGS;
-            }
-            
-            // Wait for key release
-            while (kb_AnyKey()) {
-                kb_Scan();
-                delay(50);
-            }
-        }
-        
-        // Wait a bit to prevent flicker
-        delay(50);
     }
+}
+
+/*
+ *  _  __         _                      _   ___          _    _            _   _          
+ * | |/ /___ _  _| |__  ___  __ _ _ _ __| | | _ \___ __ _(_)__| |_ _ _ __ _| |_(_)___ _ _  
+ * | ' </ -_) || | '_ \/ _ \/ _` | '_/ _` | |   / -_) _` | (_-<  _| '_/ _` |  _| / _ \ ' \ 
+ * |_|\_\___|\_, |_.__/\___/\__,_|_| \__,_| |_|_\___\__, |_/__/\__|_| \__,_|\__|_\___/_||_|
+ *           |__/                                   |___/                                  
+ *
+ * Functions for registering key events for different states.
+ */
+
+/**
+ * Registers key events for the settings menu.
+ */
+static void regiter_settings_kb(void) {
+    kb_clear();
+    kb_register_press(KEY_1, toggle_arithmetic_mode);
+    kb_register_press(KEY_2, adjust_precision);
+    kb_register_press(KEY_3, toggle_significant_digits);
+    kb_register_press(KEY_MODE, input_state);
+    kb_register_press(KEY_CLEAR, leave);
+    waiting = false;
+
+    print_footer("<MODE>:Input <1-3>:Change");
+}
+
+/**
+ * Converts a key to its corresponding number.
+ * 
+ * @param key The key to convert.
+ * @return The number corresponding to the key, or -1 if not a number key.
+ */
+static int key_to_number(CombinedKey key) {
+    if (key == KEY_0) return 0;
+    if (key == KEY_1) return 1;
+    if (key == KEY_2) return 2;
+    if (key == KEY_3) return 3;
+    if (key == KEY_4) return 4;
+    if (key == KEY_5) return 5;
+    if (key == KEY_6) return 6;
+    if (key == KEY_7) return 7;
+    if (key == KEY_8) return 8;
+    if (key == KEY_9) return 9;
+    return -1; // Not a number key
+}
+
+/**
+ * Registers key events for adjusting precision.
+ */
+static void register_precision_kb(void) {
+    kb_clear();
+    kb_register_press(KEY_0, update_precision);
+    kb_register_press(KEY_1, update_precision);
+    kb_register_press(KEY_2, update_precision);
+    kb_register_press(KEY_3, update_precision);
+    kb_register_press(KEY_4, update_precision);
+    kb_register_press(KEY_5, update_precision);
+    kb_register_press(KEY_6, update_precision);
+    kb_register_press(KEY_7, update_precision);
+    kb_register_press(KEY_8, update_precision);
+    kb_register_press(KEY_9, update_precision);
+    kb_register_press(KEY_ENTER, regiter_settings_kb);
+    print_footer("0-9:Change <ENTER>:back");
+}
+
+/**
+ * Registers key events for the result display.
+ */
+static void register_result_kb(void) {
+    kb_clear();
+    kb_register_press(KEY_MODE, input_state);
+    kb_register_press(KEY_CLEAR, leave);
+    kb_register_press(KEY_UP, scroll_up);
+    kb_register_press(KEY_DOWN, scroll_down);
+    print_footer("<MODE>:Input <CLEAR>:exit");
+}
+
+/**
+ * Scrolls up through calculation steps.
+ */
+static void scroll_up(void) {
+    step_scroll_position--;
+    show_calculation_result(&current_result);
+}
+
+/**
+ * Scrolls down through calculation steps.
+ */
+static void scroll_down(void) {
+    step_scroll_position++;
+    show_calculation_result(&current_result);
+}
+
+/**
+ * Updates the precision based on the last key pressed.
+ */
+static void update_precision(void) {
+    CombinedKey key = kb_get_last_key();
+    if (key) {
+        int num = key_to_number(key);
+        if (num >= 0) {
+            kb_clear_last_key();
+            set_precision(num);
+            print_precision();
+        }
+    }
+}
+
+/*
+ *  _   _ _   _ _ _ _          ___             _   _             
+ * | | | | |_(_) (_) |_ _  _  | __|  _ _ _  __| |_(_)___ _ _  ___
+ * | |_| |  _| | | |  _| || | | _| || | ' \/ _|  _| / _ \ ' \(_-<
+ *  \___/ \__|_|_|_|\__|\_, | |_| \_,_|_||_\__|\__|_\___/_||_/__/
+ *                      |__/                                     
+ * Miscellaneous utility functions for the calculator UI.
+ */
+
+char* get_mode_str(void) {
+    static char buffer[50];
+    ArithmeticType mode = get_arithmetic_mode();
+
+    sprintf(buffer, "%s", 
+            mode == ARITHMETIC_NORMAL ? "Normal" : 
+            mode == ARITHMETIC_TRUNCATE ? "Truncate" : "Round");
+
+    if (mode != ARITHMETIC_NORMAL) {
+        sprintf(buffer + strlen(buffer), " (%d %s)", 
+                get_precision(), 
+                get_use_significant_digits() ? "sig" : "dec");
+    }
+
+    return buffer;
 }

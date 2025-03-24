@@ -181,7 +181,7 @@ Token get_next_token(Tokenizer* tokenizer) {
         default:  token.type = TOKEN_NONE; break;
     }
 
-    log_char_token("char", token.type, current);
+    log_token_char("char", token.type, current);
     
     return token;
 }
