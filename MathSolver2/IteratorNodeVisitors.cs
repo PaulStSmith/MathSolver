@@ -41,32 +41,32 @@ public static class IteratorNodeVisitors
         }
 
         // Convert to integers for the loop
-        int startInt = (int)Math.Round(startResult.Value);
-        int endInt = (int)Math.Round(endResult.Value);
+        var startInt = (int)Math.Round(startResult.Value);
+        var endInt = (int)Math.Round(endResult.Value);
 
         // Store the original value of the iteration variable (if it exists)
-        bool hasOriginalValue = variables.TryGetValue(node.Variable, out decimal originalValue);
+        var hasOriginalValue = variables.TryGetValue(node.Variable, out var originalValue);
 
         try
         {
             // Format and add the summation setup step
-            string expression = formatter.Format(node);
+            var expression = formatter.Format(node);
             allSteps.Add(new CalculationStep(
                 expression,
                 $"Setup summation with {node.Variable} from {startInt} to {endInt}",
                 $"Calculate each term and sum"));
 
             // Initialize the result
-            decimal result = 0;
+            var result = 0m;
 
             // Evaluate the expression for each value of the iteration variable
-            for (int i = startInt; i <= endInt; i++)
+            for (var i = startInt; i <= endInt; i++)
             {
                 // Set the iteration variable
                 variables[node.Variable] = i;
 
                 // Record the current value of the iteration variable
-                string currentExpression = $"{node.Variable} = {i}";
+                var currentExpression = $"{node.Variable} = {i}";
                 allSteps.Add(new CalculationStep(
                     currentExpression,
                     $"Set iteration variable {node.Variable} to {i}",
@@ -79,8 +79,8 @@ public static class IteratorNodeVisitors
                 allSteps.AddRange(termResult.Steps);
 
                 // Add step for adding this term to the sum
-                decimal newResult = result + termResult.Value;
-                decimal formattedNewResult = formatNumber(newResult);
+                var newResult = result + termResult.Value;
+                var formattedNewResult = formatNumber(newResult);
 
                 allSteps.Add(new CalculationStep(
                     $"sum + {termResult.Value}",
@@ -149,32 +149,32 @@ public static class IteratorNodeVisitors
         }
 
         // Convert to integers for the loop
-        int startInt = (int)Math.Round(startResult.Value);
-        int endInt = (int)Math.Round(endResult.Value);
+        var startInt = (int)Math.Round(startResult.Value);
+        var endInt = (int)Math.Round(endResult.Value);
 
         // Store the original value of the iteration variable (if it exists)
-        bool hasOriginalValue = variables.TryGetValue(node.Variable, out decimal originalValue);
+        var hasOriginalValue = variables.TryGetValue(node.Variable, out var originalValue);
 
         try
         {
             // Format and add the product setup step
-            string expression = formatter.Format(node);
+            var expression = formatter.Format(node);
             allSteps.Add(new CalculationStep(
                 expression,
                 $"Setup product with {node.Variable} from {startInt} to {endInt}",
                 $"Calculate each term and multiply"));
 
             // Initialize the result
-            decimal result = 1;
+            var result = 1m;
 
             // Evaluate the expression for each value of the iteration variable
-            for (int i = startInt; i <= endInt; i++)
+            for (var i = startInt; i <= endInt; i++)
             {
                 // Set the iteration variable
                 variables[node.Variable] = i;
 
                 // Record the current value of the iteration variable
-                string currentExpression = $"{node.Variable} = {i}";
+                var currentExpression = $"{node.Variable} = {i}";
                 allSteps.Add(new CalculationStep(
                     currentExpression,
                     $"Set iteration variable {node.Variable} to {i}",
@@ -187,8 +187,8 @@ public static class IteratorNodeVisitors
                 allSteps.AddRange(termResult.Steps);
 
                 // Add step for multiplying this term to the product
-                decimal newResult = result * termResult.Value;
-                decimal formattedNewResult = formatNumber(newResult);
+                var newResult = result * termResult.Value;
+                var formattedNewResult = formatNumber(newResult);
 
                 allSteps.Add(new CalculationStep(
                     $"product * {termResult.Value}",

@@ -72,7 +72,7 @@ public class EnhancedMathSolver
     /// <exception cref="ArgumentException">Thrown when the variable is not defined</exception>
     public decimal GetVariable(string name)
     {
-        if (_variables.TryGetValue(name, out decimal value))
+        if (_variables.TryGetValue(name, out var value)) // Changed to var
         {
             return value;
         }
@@ -91,11 +91,11 @@ public class EnhancedMathSolver
         try
         {
             // Parse the expression
-            ExpressionParser parser = new ExpressionParser(expression);
-            IExpressionNode root = parser.Parse();
+            var parser = new ExpressionParser(expression); // Changed to var
+            var root = parser.Parse(); // Changed to var
 
             // Evaluate the expression with arithmetic settings
-            ArithmeticVisitor visitor = new ArithmeticVisitor(
+            var visitor = new ArithmeticVisitor( // Changed to var
                 _variables, _arithmeticType, _precision, _useSignificantDigits);
             return visitor.Evaluate(root);
         }
@@ -132,17 +132,17 @@ public class EnhancedMathSolver
         try
         {
             // Parse the expression
-            ExpressionParser parser = new ExpressionParser(expression);
-            IExpressionNode root = parser.Parse();
+            var parser = new ExpressionParser(expression); // Changed to var
+            var root = parser.Parse(); // Changed to var
 
             // Evaluate the expression step by step with arithmetic settings
-            StepByStepArithmeticVisitor visitor = new StepByStepArithmeticVisitor(
+            var visitor = new StepByStepArithmeticVisitor( // Changed to var
                 _variables, _arithmeticType, _precision, _useSignificantDigits);
-            StepByStepResult result = visitor.Evaluate(root);
+            var result = visitor.Evaluate(root); // Changed to var
 
             // Create the result object
-            string arithmeticMode = _arithmeticType.ToString();
-            string precisionInfo = _arithmeticType == ArithmeticType.Normal ? "Maximum" :
+            var arithmeticMode = _arithmeticType.ToString(); // Changed to var
+            var precisionInfo = _arithmeticType == ArithmeticType.Normal ? "Maximum" :
                 _useSignificantDigits ?
                     $"{_precision} significant digits" :
                     $"{_precision} decimal places";
@@ -180,11 +180,11 @@ public class EnhancedMathSolver
         try
         {
             // Parse the expression
-            ExpressionParser parser = new ExpressionParser(expression);
-            IExpressionNode root = parser.Parse();
+            var parser = new ExpressionParser(expression); // Changed to var
+            var root = parser.Parse(); // Changed to var
 
             // Format the expression
-            FormattingVisitor visitor = new FormattingVisitor(format);
+            var visitor = new FormattingVisitor(format); // Changed to var
             return visitor.Format(root);
         }
         catch (ParserException ex)
@@ -203,7 +203,7 @@ public class EnhancedMathSolver
     {
         try
         {
-            ExpressionParser parser = new ExpressionParser(expression);
+            var parser = new ExpressionParser(expression); // Changed to var
             parser.Parse();
 
             error = null;
@@ -267,7 +267,7 @@ public class EnhancedMathSolver
             throw new ArgumentOutOfRangeException(nameof(decimalPlaces), "Decimal places must be non-negative");
         }
 
-        decimal multiplier = (decimal)Math.Pow(10, decimalPlaces);
+        var multiplier = (decimal)Math.Pow(10, decimalPlaces); // Changed to var
 
         if (value >= 0)
         {
@@ -299,10 +299,10 @@ public class EnhancedMathSolver
         }
 
         // Get the exponent (power of 10) of the value
-        int exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value)));
+        var exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value))); // Changed to var
 
         // Calculate the number of decimal places needed
-        int decimalPlaces = sigDigits - exponent - 1;
+        var decimalPlaces = sigDigits - exponent - 1; // Changed to var
 
         // Adjust for small numbers (value < 1)
         if (value != 0 && Math.Abs(value) < 1)
@@ -333,10 +333,10 @@ public class EnhancedMathSolver
         }
 
         // Get the exponent (power of 10) of the value
-        int exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value)));
+        var exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value))); // Changed to var
 
         // Calculate the number of decimal places needed
-        int decimalPlaces = sigDigits - exponent - 1;
+        var decimalPlaces = sigDigits - exponent - 1; // Changed to var
 
         // Adjust for small numbers (value < 1)
         if (value != 0 && Math.Abs(value) < 1)

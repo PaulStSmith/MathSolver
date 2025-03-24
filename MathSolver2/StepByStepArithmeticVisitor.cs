@@ -32,7 +32,7 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
     /// <returns>A result containing the value of the number and no steps.</returns>
     public override StepByStepResult VisitNumber(NumberNode node)
     {
-        var value = FormatNumber( node.Value);
+        var value = FormatNumber(node.Value);
         return new StepByStepResult(value, new List<CalculationStep>());
     }
 
@@ -45,9 +45,9 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
     public override StepByStepResult VisitVariable(VariableNode node)
     {
         // First check if it's a mathematical constant
-        if (MathConstants.TryGetValue(node.Name, out decimal constValue))
+        if (MathConstants.TryGetValue(node.Name, out var constValue))
         {
-            decimal formattedConstValue = FormatNumber(constValue);
+            var formattedConstValue = FormatNumber(constValue);
 
             var steps = new List<CalculationStep>
             {
@@ -59,7 +59,7 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
 
             return new StepByStepResult(formattedConstValue, steps);
         }
-        if (Variables.TryGetValue(node.Name, out decimal value))
+        if (Variables.TryGetValue(node.Name, out var value))
         {
             var steps = new List<CalculationStep>
             {
@@ -88,11 +88,11 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
         var allSteps = new List<CalculationStep>(leftResult.Steps);
         allSteps.AddRange(rightResult.Steps);
 
-        decimal rawResult = leftResult.Value + rightResult.Value;
-        decimal formattedResult = FormatNumber(rawResult);
+        var rawResult = leftResult.Value + rightResult.Value;
+        var formattedResult = FormatNumber(rawResult);
 
-        string formatInfo = GetFormatInfo();
-        string expression = _formatter.Format(node);
+        var formatInfo = GetFormatInfo();
+        var expression = _formatter.Format(node);
 
         allSteps.Add(new CalculationStep(
             expression,
@@ -115,11 +115,11 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
         var allSteps = new List<CalculationStep>(leftResult.Steps);
         allSteps.AddRange(rightResult.Steps);
 
-        decimal rawResult = leftResult.Value - rightResult.Value;
-        decimal formattedResult = FormatNumber(rawResult);
+        var rawResult = leftResult.Value - rightResult.Value;
+        var formattedResult = FormatNumber(rawResult);
 
-        string formatInfo = GetFormatInfo();
-        string expression = _formatter.Format(node);
+        var formatInfo = GetFormatInfo();
+        var expression = _formatter.Format(node);
 
         allSteps.Add(new CalculationStep(
             expression,
@@ -142,11 +142,11 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
         var allSteps = new List<CalculationStep>(leftResult.Steps);
         allSteps.AddRange(rightResult.Steps);
 
-        decimal rawResult = leftResult.Value * rightResult.Value;
-        decimal formattedResult = FormatNumber(rawResult);
+        var rawResult = leftResult.Value * rightResult.Value;
+        var formattedResult = FormatNumber(rawResult);
 
-        string formatInfo = GetFormatInfo();
-        string expression = _formatter.Format(node);
+        var formatInfo = GetFormatInfo();
+        var expression = _formatter.Format(node);
 
         allSteps.Add(new CalculationStep(
             expression,
@@ -175,11 +175,11 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
             throw new EvaluationException("Division by zero", node.Position);
         }
 
-        decimal rawResult = numeratorResult.Value / denominatorResult.Value;
-        decimal formattedResult = FormatNumber(rawResult);
+        var rawResult = numeratorResult.Value / denominatorResult.Value;
+        var formattedResult = FormatNumber(rawResult);
 
-        string formatInfo = GetFormatInfo();
-        string expression = _formatter.Format(node);
+        var formatInfo = GetFormatInfo();
+        var expression = _formatter.Format(node);
 
         allSteps.Add(new CalculationStep(
             expression,
@@ -226,7 +226,7 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
             // Check if exponent is an integer
             if (Math.Abs(exponentResult.Value - Math.Round(exponentResult.Value)) < MathConstants.Epsilon)
             {
-                int intExponent = (int)Math.Round(exponentResult.Value);
+                var intExponent = (int)Math.Round(exponentResult.Value);
                 rawResult = (decimal)Math.Pow((double)baseResult.Value, intExponent);
             }
             else
@@ -238,10 +238,10 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
             operation = $"Raise {baseResult.Value} to the power of {exponentResult.Value}";
         }
 
-        decimal formattedResult = FormatNumber(rawResult);
+        var formattedResult = FormatNumber(rawResult);
 
-        string formatInfo = GetFormatInfo();
-        string expression = _formatter.Format(node);
+        var formatInfo = GetFormatInfo();
+        var expression = _formatter.Format(node);
 
         allSteps.Add(new CalculationStep(
             expression,
@@ -261,7 +261,7 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
         var innerResult = node.Expression.Accept(this);
 
         // Add a step showing the parentheses are being evaluated
-        string expression = _formatter.Format(node);
+        var expression = _formatter.Format(node);
         var allSteps = new List<CalculationStep>(innerResult.Steps);
 
         if (innerResult.Steps.Count > 0)
@@ -291,13 +291,13 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
         }
 
         // Get argument values
-        decimal[] argValues = argResults.Select(r => r.Value).ToArray();
+        var argValues = argResults.Select(r => r.Value).ToArray();
 
         // Evaluate the function - getting both result and description
         var (result, description) = EvaluateFunction(node.Name, argValues, node.Position);
 
         // Format the expression
-        string expression = _formatter.Format(node);
+        var expression = _formatter.Format(node);
 
         // Add the calculation step
         allSteps.Add(new CalculationStep(
@@ -319,7 +319,7 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
         var innerResult = node.Expression.Accept(this);
         var allSteps = new List<CalculationStep>(innerResult.Steps);
 
-        decimal value = innerResult.Value;
+        var value = innerResult.Value;
 
         // Check if value is a non-negative integer
         if (value < 0 || Math.Abs(value - Math.Round(value)) > MathConstants.Epsilon)
@@ -327,19 +327,19 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
             throw new EvaluationException("Factorial is only defined for non-negative integers", node.Position);
         }
 
-        int n = (int)Math.Round(value);
+        var n = (int)Math.Round(value);
 
         // Calculate factorial
-        decimal rawResult = 1;
-        for (int i = 2; i <= n; i++)
+        var rawResult = 1m;
+        for (var i = 2; i <= n; i++)
         {
             rawResult *= i;
         }
 
-        decimal formattedResult = FormatNumber(rawResult);
+        var formattedResult = FormatNumber(rawResult);
 
-        string formatInfo = GetFormatInfo();
-        string expression = _formatter.Format(node);
+        var formatInfo = GetFormatInfo();
+        var expression = _formatter.Format(node);
 
         allSteps.Add(new CalculationStep(
             expression,

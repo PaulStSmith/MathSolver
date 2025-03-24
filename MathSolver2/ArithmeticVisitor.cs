@@ -38,13 +38,13 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     /// <exception cref="EvaluationException">Thrown when the variable is not defined.</exception>
     public override decimal VisitVariable(VariableNode node)
     {
-        if (MathConstants.TryGetValue(node.Name, out decimal constValue))
+        if (MathConstants.TryGetValue(node.Name, out var constValue))
         {
             // Apply the existing formatting logic to the constant
             return FormatNumber(constValue);
         }
 
-        if (Variables.TryGetValue(node.Name, out decimal value))
+        if (Variables.TryGetValue(node.Name, out var value))
         {
             return FormatNumber(value);
         }
@@ -59,10 +59,10 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     /// <returns>The result of the addition.</returns>
     public override decimal VisitAddition(AdditionNode node)
     {
-        decimal left = node.Left.Accept(this);
-        decimal right = node.Right.Accept(this);
+        var left = node.Left.Accept(this);
+        var right = node.Right.Accept(this);
 
-        decimal result = left + right;
+        var result = left + right;
         return FormatNumber(result);
     }
 
@@ -73,10 +73,10 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     /// <returns>The result of the subtraction.</returns>
     public override decimal VisitSubtraction(SubtractionNode node)
     {
-        decimal left = node.Left.Accept(this);
-        decimal right = node.Right.Accept(this);
+        var left = node.Left.Accept(this);
+        var right = node.Right.Accept(this);
 
-        decimal result = left - right;
+        var result = left - right;
         return FormatNumber(result);
     }
 
@@ -87,10 +87,10 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     /// <returns>The result of the multiplication.</returns>
     public override decimal VisitMultiplication(MultiplicationNode node)
     {
-        decimal left = node.Left.Accept(this);
-        decimal right = node.Right.Accept(this);
+        var left = node.Left.Accept(this);
+        var right = node.Right.Accept(this);
 
-        decimal result = left * right;
+        var result = left * right;
         return FormatNumber(result);
     }
 
@@ -102,15 +102,15 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     /// <exception cref="EvaluationException">Thrown when division by zero occurs.</exception>
     public override decimal VisitDivision(DivisionNode node)
     {
-        decimal numerator = node.Numerator.Accept(this);
-        decimal denominator = node.Denominator.Accept(this);
+        var numerator = node.Numerator.Accept(this);
+        var denominator = node.Denominator.Accept(this);
 
         if (denominator == 0)
         {
             throw new EvaluationException("Division by zero", node.Position);
         }
 
-        decimal result = numerator / denominator;
+        var result = numerator / denominator;
         return FormatNumber(result);
     }
 
@@ -121,8 +121,8 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     /// <returns>The result of the exponentiation.</returns>
     public override decimal VisitExponent(ExponentNode node)
     {
-        decimal @base = node.Base.Accept(this);
-        decimal exponent = node.Exponent.Accept(this);
+        var @base = node.Base.Accept(this);
+        var exponent = node.Exponent.Accept(this);
 
         // Handle some special cases
         if (exponent == 0)
@@ -140,7 +140,7 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
         // Check if exponent is an integer
         if (Math.Abs(exponent - Math.Round(exponent)) < MathConstants.Epsilon)
         {
-            int intExponent = (int)Math.Round(exponent);
+            var intExponent = (int)Math.Round(exponent);
 
             // Use standard power algorithm for integer exponents
             result = (decimal)Math.Pow((double)@base, intExponent);
@@ -174,7 +174,7 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     public override decimal VisitFunction(FunctionNode node)
     {
         // Evaluate the arguments
-        decimal[] args = node.Arguments.Select(arg => arg.Accept(this)).ToArray();
+        var args = node.Arguments.Select(arg => arg.Accept(this)).ToArray();
 
         // Evaluate the function - getting both result and description
         var (result, _) = EvaluateFunction(node.Name, args, node.Position);
@@ -191,7 +191,7 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     /// <exception cref="EvaluationException">Thrown when the value is not a non-negative integer.</exception>
     public override decimal VisitFactorial(FactorialNode node)
     {
-        decimal value = node.Expression.Accept(this);
+        var value = node.Expression.Accept(this);
 
         // Check if value is a non-negative integer
         if (value < 0 || Math.Abs(value - Math.Round(value)) > MathConstants.Epsilon)
@@ -199,11 +199,11 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
             throw new EvaluationException("Factorial is only defined for non-negative integers", node.Position);
         }
 
-        int n = (int)Math.Round(value);
+        var n = (int)Math.Round(value);
 
         // Calculate factorial
-        decimal result = 1;
-        for (int i = 2; i <= n; i++)
+        var result = 1m;
+        for (var i = 2; i <= n; i++)
         {
             result *= i;
         }
@@ -222,10 +222,10 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     public override decimal VisitSummation(SummationNode node)
     {
         // Get the start value
-        decimal start = node.Start.Accept(this);
+        var start = node.Start.Accept(this);
 
         // Get the end value
-        decimal end = node.End.Accept(this);
+        var end = node.End.Accept(this);
 
         // We need to handle non-integer bounds as an error
         if (Math.Abs(start - Math.Round(start)) > MathConstants.Epsilon ||
@@ -235,25 +235,25 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
         }
 
         // Convert to integers for the loop
-        int startInt = (int)Math.Round(start);
-        int endInt = (int)Math.Round(end);
+        var startInt = (int)Math.Round(start);
+        var endInt = (int)Math.Round(end);
 
         // Store the original value of the iteration variable (if it exists)
-        bool hasOriginalValue = Variables.TryGetValue(node.Variable, out decimal originalValue);
+        var hasOriginalValue = Variables.TryGetValue(node.Variable, out var originalValue);
 
         try
         {
             // Initialize the result
-            decimal result = 0;
+            var result = 0m;
 
             // Evaluate the expression for each value of the iteration variable
-            for (int i = startInt; i <= endInt; i++)
+            for (var i = startInt; i <= endInt; i++)
             {
                 // Set the iteration variable
                 Variables[node.Variable] = i;
 
                 // Evaluate the expression and add to the result
-                decimal value = node.Expression.Accept(this);
+                var value = node.Expression.Accept(this);
                 result += value;
 
                 // Apply formatting after each step if needed
@@ -285,10 +285,10 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     public override decimal VisitProduct(ProductNode node)
     {
         // Get the start value
-        decimal start = node.Start.Accept(this);
+        var start = node.Start.Accept(this);
 
         // Get the end value
-        decimal end = node.End.Accept(this);
+        var end = node.End.Accept(this);
 
         // We need to handle non-integer bounds as an error
         if (Math.Abs(start - Math.Round(start)) > MathConstants.Epsilon ||
@@ -298,25 +298,25 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
         }
 
         // Convert to integers for the loop
-        int startInt = (int)Math.Round(start);
-        int endInt = (int)Math.Round(end);
+        var startInt = (int)Math.Round(start);
+        var endInt = (int)Math.Round(end);
 
         // Store the original value of the iteration variable (if it exists)
-        bool hasOriginalValue = Variables.TryGetValue(node.Variable, out decimal originalValue);
+        var hasOriginalValue = Variables.TryGetValue(node.Variable, out var originalValue);
 
         try
         {
             // Initialize the result
-            decimal result = 1;
+            var result = 1m;
 
             // Evaluate the expression for each value of the iteration variable
-            for (int i = startInt; i <= endInt; i++)
+            for (var i = startInt; i <= endInt; i++)
             {
                 // Set the iteration variable
                 Variables[node.Variable] = i;
 
                 // Evaluate the expression and multiply to the result
-                decimal value = node.Expression.Accept(this);
+                var value = node.Expression.Accept(this);
                 result *= value;
 
                 // Apply formatting after each step if needed

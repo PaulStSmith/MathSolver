@@ -47,8 +47,8 @@ public static class MathFunctions
     /// </summary>
     private static void RegisterAllFunctions()
     {
-        Type type = typeof(MathFunctions);
-        MethodInfo[] methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
+        var type = typeof(MathFunctions);
+        var methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static);
 
         foreach (var method in methods)
         {
@@ -71,7 +71,7 @@ public static class MathFunctions
             var function = (Func<decimal[], SourcePosition, decimal>)method.CreateDelegate(
                 typeof(Func<decimal[], SourcePosition, decimal>));
 
-            string functionName = method.Name.ToLowerInvariant();
+            var functionName = method.Name.ToLowerInvariant();
             _functions[functionName] = function;
             _descriptions[functionName] = attr.DescriptionFormat;
         }

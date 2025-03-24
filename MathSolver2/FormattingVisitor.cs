@@ -74,8 +74,8 @@ public class FormattingVisitor : IExpressionVisitor<string>
     /// <returns>The formatted addition expression as a string.</returns>
     public string VisitAddition(AdditionNode node)
     {
-        string left = node.Left.Accept(this);
-        string right = node.Right.Accept(this);
+        var left = node.Left.Accept(this);
+        var right = node.Right.Accept(this);
 
         // Check if right operand is a negative number and adjust formatting
         if (node.Right is NumberNode rightNumber && rightNumber.Value < 0)
@@ -94,8 +94,8 @@ public class FormattingVisitor : IExpressionVisitor<string>
     /// <returns>The formatted subtraction expression as a string.</returns>
     public string VisitSubtraction(SubtractionNode node)
     {
-        string left = node.Left.Accept(this);
-        string right = node.Right.Accept(this);
+        var left = node.Left.Accept(this);
+        var right = node.Right.Accept(this);
 
         return $"{left} - {right}";
     }
@@ -107,8 +107,8 @@ public class FormattingVisitor : IExpressionVisitor<string>
     /// <returns>The formatted multiplication expression as a string.</returns>
     public string VisitMultiplication(MultiplicationNode node)
     {
-        string left = FormatWithParenthesesIfNeeded(node.Left, IsLowerPrecedence(node.Left, node));
-        string right = FormatWithParenthesesIfNeeded(node.Right, IsLowerPrecedence(node.Right, node));
+        var left = FormatWithParenthesesIfNeeded(node.Left, IsLowerPrecedence(node.Left, node));
+        var right = FormatWithParenthesesIfNeeded(node.Right, IsLowerPrecedence(node.Right, node));
 
         if (_format == OutputFormat.LaTeX)
         {
@@ -127,15 +127,15 @@ public class FormattingVisitor : IExpressionVisitor<string>
     {
         if (_format == OutputFormat.LaTeX)
         {
-            string numerator = node.Numerator.Accept(this);
-            string denominator = node.Denominator.Accept(this);
+            var numerator = node.Numerator.Accept(this);
+            var denominator = node.Denominator.Accept(this);
 
             return $"\\frac{{{numerator}}}{{{denominator}}}";
         }
         else
         {
-            string numerator = FormatWithParenthesesIfNeeded(node.Numerator, IsLowerPrecedence(node.Numerator, node));
-            string denominator = FormatWithParenthesesIfNeeded(node.Denominator, IsLowerPrecedence(node.Denominator, node));
+            var numerator = FormatWithParenthesesIfNeeded(node.Numerator, IsLowerPrecedence(node.Numerator, node));
+            var denominator = FormatWithParenthesesIfNeeded(node.Denominator, IsLowerPrecedence(node.Denominator, node));
 
             return $"{numerator} / {denominator}";
         }
@@ -148,9 +148,9 @@ public class FormattingVisitor : IExpressionVisitor<string>
     /// <returns>The formatted exponent expression as a string.</returns>
     public string VisitExponent(ExponentNode node)
     {
-        string baseStr = FormatWithParenthesesIfNeeded(node.Base,
+        var baseStr = FormatWithParenthesesIfNeeded(node.Base,
             IsLowerPrecedence(node.Base, node) || node.Base is ExponentNode);
-        string exponentStr = FormatWithParenthesesIfNeeded(node.Exponent,
+        var exponentStr = FormatWithParenthesesIfNeeded(node.Exponent,
             IsLowerPrecedence(node.Exponent, node));
 
         if (_format == OutputFormat.LaTeX)
@@ -168,7 +168,7 @@ public class FormattingVisitor : IExpressionVisitor<string>
     /// <returns>The formatted parenthesis expression as a string.</returns>
     public string VisitParenthesis(ParenthesisNode node)
     {
-        string inner = node.Expression.Accept(this);
+        var inner = node.Expression.Accept(this);
 
         return $"({inner})";
     }
@@ -180,12 +180,12 @@ public class FormattingVisitor : IExpressionVisitor<string>
     /// <returns>The formatted function expression as a string.</returns>
     public string VisitFunction(FunctionNode node)
     {
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         sb.Append(node.Name);
         sb.Append('(');
 
-        for (int i = 0; i < node.Arguments.Count; i++)
+        for (var i = 0; i < node.Arguments.Count; i++)
         {
             if (i > 0)
             {
@@ -207,7 +207,7 @@ public class FormattingVisitor : IExpressionVisitor<string>
     /// <returns>The formatted factorial expression as a string.</returns>
     public string VisitFactorial(FactorialNode node)
     {
-        string expr = FormatWithParenthesesIfNeeded(node.Expression,
+        var expr = FormatWithParenthesesIfNeeded(node.Expression,
             !(node.Expression is NumberNode || node.Expression is VariableNode || node.Expression is ParenthesisNode));
 
         return $"{expr}!";
@@ -221,7 +221,7 @@ public class FormattingVisitor : IExpressionVisitor<string>
     /// <returns>The formatted node as a string.</returns>
     private string FormatWithParenthesesIfNeeded(IExpressionNode node, bool needsParentheses)
     {
-        string formatted = node.Accept(this);
+        var formatted = node.Accept(this);
 
         if (needsParentheses)
         {
@@ -239,8 +239,8 @@ public class FormattingVisitor : IExpressionVisitor<string>
     /// <returns><c>true</c> if the child node has lower precedence; otherwise, <c>false</c>.</returns>
     private bool IsLowerPrecedence(IExpressionNode node, IExpressionNode parent)
     {
-        int nodePrecedence = GetPrecedence(node);
-        int parentPrecedence = GetPrecedence(parent);
+        var nodePrecedence = GetPrecedence(node);
+        var parentPrecedence = GetPrecedence(parent);
 
         return nodePrecedence < parentPrecedence;
     }

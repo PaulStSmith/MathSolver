@@ -169,7 +169,7 @@ public abstract class BaseArithmeticVisitor<T> : ILatexExpressionVisitor<T>
             throw new ArgumentOutOfRangeException(nameof(decimalPlaces), "Decimal places must be non-negative");
         }
 
-        decimal multiplier = (decimal)Math.Pow(10, decimalPlaces);
+        var multiplier = (decimal)Math.Pow(10, decimalPlaces);
 
         if (value >= 0)
         {
@@ -201,10 +201,10 @@ public abstract class BaseArithmeticVisitor<T> : ILatexExpressionVisitor<T>
         }
 
         // Get the exponent (power of 10) of the value
-        int exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value)));
+        var exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value)));
 
         // Calculate the number of decimal places needed
-        int decimalPlaces = sigDigits - exponent - 1;
+        var decimalPlaces = sigDigits - exponent - 1;
 
         // Adjust for small numbers (value < 1)
         if (value != 0 && Math.Abs(value) < 1)
@@ -235,10 +235,10 @@ public abstract class BaseArithmeticVisitor<T> : ILatexExpressionVisitor<T>
         }
 
         // Get the exponent (power of 10) of the value
-        int exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value)));
+        var exponent = (int)Math.Floor(Math.Log10((double)Math.Abs(value)));
 
         // Calculate the number of decimal places needed
-        int decimalPlaces = sigDigits - exponent - 1;
+        var decimalPlaces = sigDigits - exponent - 1;
 
         // Adjust for small numbers (value < 1)
         if (value != 0 && Math.Abs(value) < 1)
@@ -262,13 +262,13 @@ public abstract class BaseArithmeticVisitor<T> : ILatexExpressionVisitor<T>
         SourcePosition position)
     {
         // Get the raw result
-        decimal rawResult = MathFunctions.Evaluate(functionName, args, position);
+        var rawResult = MathFunctions.Evaluate(functionName, args, position);
 
         // Format the result according to arithmetic settings
-        decimal formattedResult = FormatNumber(rawResult);
+        var formattedResult = FormatNumber(rawResult);
 
         // Get the operation description
-        string descriptionFormat = MathFunctions.GetDescriptionFormat(functionName);
+        var descriptionFormat = MathFunctions.GetDescriptionFormat(functionName);
         string description;
 
         if (args.Length == 1)
@@ -285,7 +285,7 @@ public abstract class BaseArithmeticVisitor<T> : ILatexExpressionVisitor<T>
         }
 
         // Add the formatting information to the description
-        string formatInfo = GetFormatInfo();
+        var formatInfo = GetFormatInfo();
         description = $"{description}, {formatInfo}";
 
         return (formattedResult, description);

@@ -54,7 +54,7 @@ public class ExpressionParser
     /// <exception cref="ParserException">Thrown if there are unexpected tokens in the input.</exception>
     public IExpressionNode Parse()
     {
-        IExpressionNode node = ParseExpression();
+        var node = ParseExpression();
 
         if (_currentToken.Type != TokenType.EndOfExpression)
         {
@@ -70,13 +70,13 @@ public class ExpressionParser
     /// <returns>The parsed expression node.</returns>
     private IExpressionNode ParseExpression()
     {
-        IExpressionNode left = ParseTerm();
+        var left = ParseTerm();
 
         while (_currentToken.Type == TokenType.Plus || _currentToken.Type == TokenType.Minus)
         {
-            Token operatorToken = _currentToken;
+            var operatorToken = _currentToken;
             NextToken();
-            IExpressionNode right = ParseTerm();
+            var right = ParseTerm();
 
             if (operatorToken.Type == TokenType.Plus)
             {
@@ -103,13 +103,13 @@ public class ExpressionParser
     /// <returns>The parsed term node.</returns>
     private IExpressionNode ParseTerm()
     {
-        IExpressionNode left = ParseFactor();
+        var left = ParseFactor();
 
         while (_currentToken.Type == TokenType.Multiply || _currentToken.Type == TokenType.Divide)
         {
-            Token operatorToken = _currentToken;
+            var operatorToken = _currentToken;
             NextToken();
-            IExpressionNode right = ParseFactor();
+            var right = ParseFactor();
 
             if (operatorToken.Type == TokenType.Multiply)
             {
@@ -136,13 +136,13 @@ public class ExpressionParser
     /// <returns>The parsed factor node.</returns>
     private IExpressionNode ParseFactor()
     {
-        IExpressionNode left = ParsePrimary();
+        var left = ParsePrimary();
 
         if (_currentToken.Type == TokenType.Power)
         {
-            Token operatorToken = _currentToken;
+            var operatorToken = _currentToken;
             NextToken();
-            IExpressionNode right = ParseFactor(); // Note: right-associative
+            var right = ParseFactor(); // Note: right-associative
 
             left = new ExponentNode(left, right);
 
@@ -162,7 +162,7 @@ public class ExpressionParser
     /// <returns>The parsed primary expression node.</returns>
     private IExpressionNode ParsePrimary()
     {
-        Token token = _currentToken;
+        var token = _currentToken;
 
         switch (token.Type)
         {
@@ -180,7 +180,7 @@ public class ExpressionParser
 
             case TokenType.LeftParenthesis:
                 NextToken();
-                IExpressionNode expr = ParseExpression();
+                var expr = ParseExpression();
 
                 if (_currentToken.Type != TokenType.RightParenthesis)
                 {
@@ -197,7 +197,7 @@ public class ExpressionParser
 
             case TokenType.Minus: // Unary minus
                 NextToken();
-                IExpressionNode factor = ParseFactor();
+                var factor = ParseFactor();
                 // Create a subtraction with 0 as the left operand
                 var zeroNode = new NumberNode(0);
                 zeroNode.Position = token.Position;
@@ -221,8 +221,8 @@ public class ExpressionParser
     /// <exception cref="ParserException">Thrown if the command is unsupported.</exception>
     private IExpressionNode ParseLatexCommand()
     {
-        Token token = _currentToken;
-        string command = token.Value;
+        var token = _currentToken;
+        var command = token.Value;
 
         NextToken(); // Consume the command token
 
@@ -251,7 +251,7 @@ public class ExpressionParser
         NextToken(); // Consume {
 
         // Parse numerator expression
-        IExpressionNode numerator = ParseExpression();
+        var numerator = ParseExpression();
 
         // Expect closing brace for numerator
         if (_currentToken.Type != TokenType.RightBrace)
@@ -270,7 +270,7 @@ public class ExpressionParser
         NextToken(); // Consume {
 
         // Parse denominator expression
-        IExpressionNode denominator = ParseExpression();
+        var denominator = ParseExpression();
 
         // Expect closing brace for denominator
         if (_currentToken.Type != TokenType.RightBrace)
@@ -307,7 +307,7 @@ public class ExpressionParser
         NextToken(); // Consume _
 
         // Parse the lower bound information (variable and start value)
-        IterationRange range = ParseIterationRange();
+        var range = ParseIterationRange();
 
         // Check for superscript (^) indicating the upper bound
         if (_currentToken.Type != TokenType.Power)
@@ -318,10 +318,10 @@ public class ExpressionParser
         NextToken(); // Consume ^
 
         // Parse the upper bound expression
-        IExpressionNode upperBound = ParseBracedExpression();
+        var upperBound = ParseBracedExpression();
 
         // Parse the expression to sum
-        IExpressionNode expression = ParseBracedExpressionOrPrimary();
+        var expression = ParseBracedExpressionOrPrimary();
 
         // Create summation node
         var summationNode = new SummationNode(range.Variable, range.Start, upperBound, expression);
@@ -350,7 +350,7 @@ public class ExpressionParser
         NextToken(); // Consume _
 
         // Parse the lower bound information (variable and start value)
-        IterationRange range = ParseIterationRange();
+        var range = ParseIterationRange();
 
         // Check for superscript (^) indicating the upper bound
         if (_currentToken.Type != TokenType.Power)
@@ -361,10 +361,10 @@ public class ExpressionParser
         NextToken(); // Consume ^
 
         // Parse the upper bound expression
-        IExpressionNode upperBound = ParseBracedExpression();
+        var upperBound = ParseBracedExpression();
 
         // Parse the expression to multiply
-        IExpressionNode expression = ParseBracedExpressionOrPrimary();
+        var expression = ParseBracedExpressionOrPrimary();
 
         // Create product node
         var productNode = new ProductNode(range.Variable, range.Start, upperBound, expression);
@@ -404,7 +404,7 @@ public class ExpressionParser
         }
 
         // Parse the expression under the square root
-        IExpressionNode expression = ParseBracedExpression();
+        var expression = ParseBracedExpression();
 
         // If order is specified, create a power with 1/order exponent
         if (order != null)
@@ -450,7 +450,7 @@ public class ExpressionParser
     private IExpressionNode ParseSimpleFunctionCommand(string functionName, SourcePosition commandPosition)
     {
         // Parse the argument to the function
-        IExpressionNode argument = ParseBracedExpressionOrPrimary();
+        var argument = ParseBracedExpressionOrPrimary();
 
         // Create function node
         var arguments = new List<IExpressionNode> { argument };
@@ -500,7 +500,7 @@ public class ExpressionParser
         NextToken(); // Consume {
 
         // Parse the expression
-        IExpressionNode expression = ParseExpression();
+        var expression = ParseExpression();
 
         // Expect closing brace
         if (_currentToken.Type != TokenType.RightBrace)
@@ -540,7 +540,7 @@ public class ExpressionParser
         {
             NextToken(); // Consume {
 
-            IterationRange range = ParseIterationRangeContent();
+            var range = ParseIterationRangeContent();
 
             // Expect closing brace
             if (_currentToken.Type != TokenType.RightBrace)
@@ -570,7 +570,7 @@ public class ExpressionParser
             throw new ParserException("Expected variable name in iteration range", _currentToken.Position);
         }
 
-        string variable = _currentToken.Value;
+        var variable = _currentToken.Value;
         NextToken(); // Consume variable
 
         // Expect equals sign

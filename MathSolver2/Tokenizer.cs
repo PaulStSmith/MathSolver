@@ -112,11 +112,11 @@ public class Tokenizer
     /// </summary>
     public Token Peek()
     {
-        int savedPosition = _position;
-        int savedLine = _line;
-        int savedColumn = _column;
+        var savedPosition = _position;
+        var savedLine = _line;
+        var savedColumn = _column;
 
-        Token token = GetNextToken();
+        var token = GetNextToken();
 
         _position = savedPosition;
         _line = savedLine;
@@ -139,10 +139,10 @@ public class Tokenizer
                 new SourcePosition(_position, _position, _line, _column));
         }
 
-        char current = _input[_position];
-        int startPosition = _position;
-        int startLine = _line;
-        int startColumn = _column;
+        var current = _input[_position];
+        var startPosition = _position;
+        var startLine = _line;
+        var startColumn = _column;
 
         // Check for numbers
         if (char.IsDigit(current) || current == '.')
@@ -229,16 +229,16 @@ public class Tokenizer
     /// </summary>
     private Token ScanNumber()
     {
-        int startPosition = _position;
-        int startLine = _line;
-        int startColumn = _column;
+        var startPosition = _position;
+        var startLine = _line;
+        var startColumn = _column;
 
-        StringBuilder sb = new StringBuilder();
-        bool hasDecimalPoint = false;
+        var sb = new StringBuilder();
+        var hasDecimalPoint = false;
 
         while (_position < _input.Length)
         {
-            char current = _input[_position];
+            var current = _input[_position];
 
             if (char.IsDigit(current))
             {
@@ -257,7 +257,7 @@ public class Tokenizer
             }
         }
 
-        string numberStr = sb.ToString();
+        var numberStr = sb.ToString();
 
         // If it's just a decimal point with no digits, treat it as an error
         if (numberStr == ".")
@@ -275,11 +275,11 @@ public class Tokenizer
     /// </summary>
     private Token ScanIdentifier()
     {
-        int startPosition = _position;
-        int startLine = _line;
-        int startColumn = _column;
+        var startPosition = _position;
+        var startLine = _line;
+        var startColumn = _column;
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         while (_position < _input.Length && (char.IsLetterOrDigit(_input[_position]) || _input[_position] == '_'))
         {
@@ -296,14 +296,14 @@ public class Tokenizer
     /// </summary>
     private Token ScanLatexCommand()
     {
-        int startPosition = _position;
-        int startLine = _line;
-        int startColumn = _column;
+        var startPosition = _position;
+        var startLine = _line;
+        var startColumn = _column;
 
         // Skip the backslash
         MoveNext();
 
-        StringBuilder sb = new StringBuilder();
+        var sb = new StringBuilder();
 
         // LaTeX command names can only contain letters
         while (_position < _input.Length && char.IsLetter(_input[_position]))
