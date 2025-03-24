@@ -53,7 +53,8 @@ public class FormattingVisitor : IExpressionVisitor<string>
     public string VisitNumber(NumberNode node)
     {
         // Format the number using the invariant culture to ensure consistent output
-        return node.Value.ToString(CultureInfo.InvariantCulture);
+        var value = node.Value;
+        return value.ToString(CultureInfo.InvariantCulture);
     }
 
     /// <summary>

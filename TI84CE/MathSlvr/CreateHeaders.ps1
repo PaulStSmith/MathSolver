@@ -149,6 +149,8 @@ extern "C" {
 #endif
 
 // Include necessary system headers
+#include <tice.h>
+#include <ti/real.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <string.h>

@@ -1,5 +1,7 @@
 #include <stdio.h>
-#include <math.h>
+#include <string.h>
+#include <tice.h>
+#include <ti/real.h>
 #include "headers/log.h"
 #include "headers/mathsolver.h"
 #include "headers/evaluator_private.h"
@@ -22,104 +24,153 @@
  * @param node Pointer to the expression node to evaluate.
  * @return The result of the evaluation.
  */
-double evaluate_expression(ExpressionNode* node) {
+real_t evaluate_expression(ExpressionNode* node) {
     if (node == NULL) {
         log_error("Null expression node");
-        return 0;
+        real_t zero = os_Int24ToReal(0);
+        return zero;
     }
     
     switch (node->type) {
         case NODE_NUMBER: {
-            double value = node->number_value;
-            double result = apply_arithmetic_format(value);
-            log_message("Evaluating number: %.6f -> %.6f", value, result);
+            real_t value = node->number_value;
+            real_t result = apply_arithmetic_format(value);
+            
+            char value_str[MAX_TOKEN_LENGTH];
+            char rst_str[MAX_TOKEN_LENGTH];
+            format_real(value, value_str);
+            format_real(result, rst_str);
+            log_message("Evaluating number: %s -> %s", value_str, rst_str);
+            
             return result;
         }
         
         case NODE_VARIABLE: {
             bool found;
-            double value = get_variable(node->variable.name, &found);
-            double result = apply_arithmetic_format(value);
+            real_t value = get_variable(node->variable.name, &found);
+            real_t result = apply_arithmetic_format(value);
+            
             if (!found) {
                 log_error("Undefined variable");
             } else {
-                log_message("Variable evaluated: %s = %.6f -> %.6f", node->variable.name, value, result);
+                char value_str[MAX_TOKEN_LENGTH];
+                char rst_str[MAX_TOKEN_LENGTH];
+                format_real(value, value_str);
+                format_real(result, rst_str);
+                log_message("Variable evaluated: %s = %s -> %s", node->variable.name, value_str, rst_str);
             }
+            
             return result;
         }
         
         case NODE_ADDITION: {
-            double left = evaluate_expression(node->binary_op.left);
-            double right = evaluate_expression(node->binary_op.right);
-            double result = apply_arithmetic_format(left + right);
-            log_operation("Addition", result);
+            real_t left = evaluate_expression(node->binary_op.left);
+            real_t right = evaluate_expression(node->binary_op.right);
+            real_t result = apply_arithmetic_format(os_RealAdd(&left, &right));
+            
+            char rst_str[MAX_TOKEN_LENGTH];
+            format_real(result, rst_str);
+            log_operation("Addition", rst_str);
+            
             return result;
         }
         
         case NODE_SUBTRACTION: {
-            double left = evaluate_expression(node->binary_op.left);
-            double right = evaluate_expression(node->binary_op.right);
-            double result = apply_arithmetic_format(left - right);
-            log_operation("Subtraction", result);
+            real_t left = evaluate_expression(node->binary_op.left);
+            real_t right = evaluate_expression(node->binary_op.right);
+            real_t result = apply_arithmetic_format(os_RealSub(&left, &right));
+            
+            char rst_str[MAX_TOKEN_LENGTH];
+            format_real(result, rst_str);
+            log_operation("Subtraction", rst_str);
+            
             return result;
         }
         
         case NODE_MULTIPLICATION: {
-            double left = evaluate_expression(node->binary_op.left);
-            double right = evaluate_expression(node->binary_op.right);
-            double result = apply_arithmetic_format(left * right);
-            log_operation("Multiplication", result);
+            real_t left = evaluate_expression(node->binary_op.left);
+            real_t right = evaluate_expression(node->binary_op.right);
+            real_t result = apply_arithmetic_format(os_RealMul(&left, &right));
+            
+            char rst_str[MAX_TOKEN_LENGTH];
+            format_real(result, rst_str);
+            log_operation("Multiplication", rst_str);
+            
             return result;
         }
         
         case NODE_DIVISION: {
-            double left = evaluate_expression(node->binary_op.left);
-            double right = evaluate_expression(node->binary_op.right);
-            if (fabs(right) < EPSILON) {
+            real_t left = evaluate_expression(node->binary_op.left);
+            real_t right = evaluate_expression(node->binary_op.right);
+            
+            real_t zero = os_Int24ToReal(0);
+            if (os_RealCompare(&right, &zero) == 0) {
                 log_error("Division by zero");
-                return 0;
+                return zero;
             }
-            double result = apply_arithmetic_format(left / right);
-            log_operation("Division", result);
+            
+            real_t result = apply_arithmetic_format(os_RealDiv(&left, &right));
+            
+            char rst_str[MAX_TOKEN_LENGTH];
+            format_real(result, rst_str);
+            log_operation("Division", rst_str);
+            
             return result;
         }
         
         case NODE_EXPONENT: {
-            double left = evaluate_expression(node->binary_op.left);
-            double right = evaluate_expression(node->binary_op.right);
-            double result = apply_arithmetic_format(pow(left, right));
-            log_operation("Exponentiation", result);
+            real_t left = evaluate_expression(node->binary_op.left);
+            real_t right = evaluate_expression(node->binary_op.right);
+            real_t result = apply_arithmetic_format(os_RealPow(&left, &right));
+            
+            char rst_str[MAX_TOKEN_LENGTH];
+            format_real(result, rst_str);
+            log_operation("Exponentiation", rst_str);
+            
             return result;
         }
         
         case NODE_FUNCTION: {
-            double argument = evaluate_expression(node->function.argument);
-            double result = apply_arithmetic_format(
+            real_t argument = evaluate_expression(node->function.argument);
+            real_t result = apply_arithmetic_format(
                 evaluate_function(node->function.func_type, argument)
             );
-            log_operation(get_function_name(node->function.func_type), result);
+            
+            char rst_str[MAX_TOKEN_LENGTH];
+            format_real(result, rst_str);
+            log_operation(get_function_name(node->function.func_type), rst_str);
+            
             return result;
         }
         
         case NODE_FACTORIAL: {
-            double value = evaluate_expression(node->factorial.expression);
+            real_t value = evaluate_expression(node->factorial.expression);
             
             // Check if value is a non-negative integer
-            if (value < 0 || fabs(value - round(value)) > EPSILON) {
+            real_t rounded = os_RealRoundInt(&value);
+            real_t zero = os_Int24ToReal(0);
+            
+            if (os_RealCompare(&value, &zero) < 0 || 
+                os_RealCompare(&value, &rounded) != 0) {
                 // Handle error: factorial is only defined for non-negative integers
-                // In a real implementation, we would report an error
-                return 0;
+                log_error("Factorial is only defined for non-negative integers");
+                return zero;
             }
             
-            int n = (int)round(value);
-            double result = 1;
+            int24_t n = os_RealToInt24(&value);
+            real_t result = os_Int24ToReal(1);
             
             for (int i = 2; i <= n; i++) {
-                result *= i;
+                real_t i_real = os_Int24ToReal(i);
+                result = os_RealMul(&result, &i_real);
             }
             
             result = apply_arithmetic_format(result);
-            log_operation("Factorial", result);
+            
+            char rst_str[MAX_TOKEN_LENGTH];
+            format_real(result, rst_str);
+            log_operation("Factorial", rst_str);
+            
             return result;
         }
         
@@ -128,7 +179,8 @@ double evaluate_expression(ExpressionNode* node) {
         
         default:
             log_error("Unknown node type");
-            return 0;
+            real_t zero = os_Int24ToReal(0);
+            return zero;
     }
 }
 
@@ -155,16 +207,19 @@ bool evaluate_expression_string(const char* input, CalculationResult* result) {
     result->value = evaluate_with_steps(root, result);
     
     // Format the final result
-    format_number(result->value, result->formatted_result);
+    format_real(result->value, result->formatted_result);
     
     return true;
 }
 
 char* node_to_string(ExpressionNode* node) {
     static char buffer[MAX_INPUT_LENGTH];
+    char temp[MAX_TOKEN_LENGTH];
+    
     switch (node->type) {
         case NODE_NUMBER:
-            sprintf(buffer, "%.6f", node->number_value);
+            format_real(node->number_value, temp);
+            sprintf(buffer, "%s", temp);
             break;
         case NODE_VARIABLE:
             sprintf(buffer, "%s", node->variable.name);
@@ -202,7 +257,9 @@ char* node_to_string(ExpressionNode* node) {
 
 char* result_to_string(CalculationResult* result) {
     static char buffer[MAX_INPUT_LENGTH];
-    sprintf(buffer, "Value: %.6f, Step: %d, Result: %s", result->value, result->step_count, result->formatted_result);
+    char value_str[MAX_TOKEN_LENGTH];
+    format_real(result->value, value_str);
+    sprintf(buffer, "Value: %s, Step: %d, Result: %s", value_str, result->step_count, result->formatted_result);
     return buffer;
 }
 
@@ -213,26 +270,32 @@ char* result_to_string(CalculationResult* result) {
  * @param result Pointer to the structure to store the evaluation steps.
  * @return The result of the evaluation.
  */
-double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
-
+real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
     log_debug("Evaluating expression with steps.");
     log_message("Node: %s", node_to_string(node));
     log_message("Result: %s", result_to_string(result));    
 
-    if (node == NULL) return 0;
+    if (node == NULL) {
+        real_t zero = os_Int24ToReal(0);
+        return zero;
+    }
     
     switch (node->type) {
         case NODE_NUMBER: {
-            double value = node->number_value;
-            double rst = apply_arithmetic_format(value);
-            log_operation("Number", rst);
+            real_t value = node->number_value;
+            real_t rst = apply_arithmetic_format(value);
+            
+            char rst_str[MAX_TOKEN_LENGTH];
+            format_real(rst, rst_str);
+            log_operation("Number", rst_str);
+            
             // No step needed for a simple number
             return rst;
         }
         
         case NODE_VARIABLE: {
             bool found;
-            double value = get_variable(node->variable.name, &found);
+            real_t value = get_variable(node->variable.name, &found);
             
             if (found && result->step_count < MAX_STEPS) {
                 // Record the variable substitution step
@@ -240,22 +303,23 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                 
                 sprintf(step->expression, "%s", node->variable.name);
                 sprintf(step->operation, "Substitute variable %s", node->variable.name);
-                format_number(value, step->result);
+                format_real(value, step->result);
             }
             
             if (!found) {
                 // Handle undefined variable
-                return 0;
+                real_t zero = os_Int24ToReal(0);
+                return zero;
             }
             
             return value;
         }
         
         case NODE_ADDITION: {
-            double left = evaluate_with_steps(node->binary_op.left, result);
-            double right = evaluate_with_steps(node->binary_op.right, result);
-            double operation_result = left + right;
-            double formatted_result = apply_arithmetic_format(operation_result);
+            real_t left = evaluate_with_steps(node->binary_op.left, result);
+            real_t right = evaluate_with_steps(node->binary_op.right, result);
+            real_t operation_result = os_RealAdd(&left, &right);
+            real_t formatted_result = apply_arithmetic_format(operation_result);
             
             if (result->step_count < MAX_STEPS) {
                 // Record the addition step
@@ -263,22 +327,22 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                 
                 char left_str[MAX_TOKEN_LENGTH];
                 char right_str[MAX_TOKEN_LENGTH];
-                format_number(left, left_str);
-                format_number(right, right_str);
+                format_real(left, left_str);
+                format_real(right, right_str);
                 
                 sprintf(step->expression, "%s + %s", left_str, right_str);
                 sprintf(step->operation, "Add %s and %s", left_str, right_str);
-                format_number(formatted_result, step->result);
+                format_real(formatted_result, step->result);
             }
             
             return formatted_result;
         }
         
         case NODE_SUBTRACTION: {
-            double left = evaluate_with_steps(node->binary_op.left, result);
-            double right = evaluate_with_steps(node->binary_op.right, result);
-            double operation_result = left - right;
-            double formatted_result = apply_arithmetic_format(operation_result);
+            real_t left = evaluate_with_steps(node->binary_op.left, result);
+            real_t right = evaluate_with_steps(node->binary_op.right, result);
+            real_t operation_result = os_RealSub(&left, &right);
+            real_t formatted_result = apply_arithmetic_format(operation_result);
             
             if (result->step_count < MAX_STEPS) {
                 // Record the subtraction step
@@ -286,22 +350,22 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                 
                 char left_str[MAX_TOKEN_LENGTH];
                 char right_str[MAX_TOKEN_LENGTH];
-                format_number(left, left_str);
-                format_number(right, right_str);
+                format_real(left, left_str);
+                format_real(right, right_str);
                 
                 sprintf(step->expression, "%s - %s", left_str, right_str);
                 sprintf(step->operation, "Subtract %s from %s", right_str, left_str);
-                format_number(formatted_result, step->result);
+                format_real(formatted_result, step->result);
             }
             
             return formatted_result;
         }
         
         case NODE_MULTIPLICATION: {
-            double left = evaluate_with_steps(node->binary_op.left, result);
-            double right = evaluate_with_steps(node->binary_op.right, result);
-            double operation_result = left * right;
-            double formatted_result = apply_arithmetic_format(operation_result);
+            real_t left = evaluate_with_steps(node->binary_op.left, result);
+            real_t right = evaluate_with_steps(node->binary_op.right, result);
+            real_t operation_result = os_RealMul(&left, &right);
+            real_t formatted_result = apply_arithmetic_format(operation_result);
             
             if (result->step_count < MAX_STEPS) {
                 // Record the multiplication step
@@ -309,22 +373,23 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                 
                 char left_str[MAX_TOKEN_LENGTH];
                 char right_str[MAX_TOKEN_LENGTH];
-                format_number(left, left_str);
-                format_number(right, right_str);
+                format_real(left, left_str);
+                format_real(right, right_str);
                 
                 sprintf(step->expression, "%s * %s", left_str, right_str);
                 sprintf(step->operation, "Multiply %s by %s", left_str, right_str);
-                format_number(formatted_result, step->result);
+                format_real(formatted_result, step->result);
             }
             
             return formatted_result;
         }
         
         case NODE_DIVISION: {
-            double left = evaluate_with_steps(node->binary_op.left, result);
-            double right = evaluate_with_steps(node->binary_op.right, result);
+            real_t left = evaluate_with_steps(node->binary_op.left, result);
+            real_t right = evaluate_with_steps(node->binary_op.right, result);
             
-            if (fabs(right) < EPSILON) {
+            real_t zero = os_Int24ToReal(0);
+            if (os_RealCompare(&right, &zero) == 0) {
                 // Division by zero
                 if (result->step_count < MAX_STEPS) {
                     CalculationStep* step = &result->steps[result->step_count++];
@@ -333,11 +398,11 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                     sprintf(step->operation, "Error");
                     sprintf(step->result, "Undefined");
                 }
-                return 0;
+                return zero;
             }
             
-            double operation_result = left / right;
-            double formatted_result = apply_arithmetic_format(operation_result);
+            real_t operation_result = os_RealDiv(&left, &right);
+            real_t formatted_result = apply_arithmetic_format(operation_result);
             
             if (result->step_count < MAX_STEPS) {
                 // Record the division step
@@ -345,22 +410,22 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                 
                 char left_str[MAX_TOKEN_LENGTH];
                 char right_str[MAX_TOKEN_LENGTH];
-                format_number(left, left_str);
-                format_number(right, right_str);
+                format_real(left, left_str);
+                format_real(right, right_str);
                 
                 sprintf(step->expression, "%s / %s", left_str, right_str);
                 sprintf(step->operation, "Divide %s by %s", left_str, right_str);
-                format_number(formatted_result, step->result);
+                format_real(formatted_result, step->result);
             }
             
             return formatted_result;
         }
         
         case NODE_EXPONENT: {
-            double base = evaluate_with_steps(node->binary_op.left, result);
-            double exponent = evaluate_with_steps(node->binary_op.right, result);
-            double operation_result = pow(base, exponent);
-            double formatted_result = apply_arithmetic_format(operation_result);
+            real_t base = evaluate_with_steps(node->binary_op.left, result);
+            real_t exponent = evaluate_with_steps(node->binary_op.right, result);
+            real_t operation_result = os_RealPow(&base, &exponent);
+            real_t formatted_result = apply_arithmetic_format(operation_result);
             
             if (result->step_count < MAX_STEPS) {
                 // Record the exponentiation step
@@ -368,26 +433,30 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                 
                 char base_str[MAX_TOKEN_LENGTH];
                 char exponent_str[MAX_TOKEN_LENGTH];
-                format_number(base, base_str);
-                format_number(exponent, exponent_str);
+                format_real(base, base_str);
+                format_real(exponent, exponent_str);
                 
                 sprintf(step->expression, "%s ^ %s", base_str, exponent_str);
                 sprintf(step->operation, "Raise %s to power %s", base_str, exponent_str);
-                format_number(formatted_result, step->result);
+                format_real(formatted_result, step->result);
             }
             
             return formatted_result;
         }
         
         case NODE_FUNCTION: {
-            double argument = evaluate_with_steps(node->function.argument, result);
+            real_t argument = evaluate_with_steps(node->function.argument, result);
             const char* func_name = get_function_name(node->function.func_type);
             
             // Handle domain errors
             bool domain_error = false;
-            if ((node->function.func_type == FUNC_LOG || node->function.func_type == FUNC_LN) && argument <= 0) {
+            real_t zero = os_Int24ToReal(0);
+            
+            if ((node->function.func_type == FUNC_LOG || node->function.func_type == FUNC_LN) && 
+                os_RealCompare(&argument, &zero) <= 0) {
                 domain_error = true;
-            } else if (node->function.func_type == FUNC_SQRT && argument < 0) {
+            } else if (node->function.func_type == FUNC_SQRT && 
+                      os_RealCompare(&argument, &zero) < 0) {
                 domain_error = true;
             }
             
@@ -399,32 +468,36 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                     sprintf(step->operation, "Error");
                     sprintf(step->result, "Undefined");
                 }
-                return 0;
+                return zero;
             }
             
-            double operation_result = evaluate_function(node->function.func_type, argument);
-            double formatted_result = apply_arithmetic_format(operation_result);
+            real_t operation_result = evaluate_function(node->function.func_type, argument);
+            real_t formatted_result = apply_arithmetic_format(operation_result);
             
             if (result->step_count < MAX_STEPS) {
                 // Record the function evaluation step
                 CalculationStep* step = &result->steps[result->step_count++];
                 
                 char arg_str[MAX_TOKEN_LENGTH];
-                format_number(argument, arg_str);
+                format_real(argument, arg_str);
                 
                 sprintf(step->expression, "%s(%s)", func_name, arg_str);
                 sprintf(step->operation, "Calculate %s of %s", func_name, arg_str);
-                format_number(formatted_result, step->result);
+                format_real(formatted_result, step->result);
             }
             
             return formatted_result;
         }
         
         case NODE_FACTORIAL: {
-            double expression_value = evaluate_with_steps(node->factorial.expression, result);
+            real_t expression_value = evaluate_with_steps(node->factorial.expression, result);
             
             // Check if value is a non-negative integer
-            if (expression_value < 0 || fabs(expression_value - round(expression_value)) > EPSILON) {
+            real_t rounded = os_RealRoundInt(&expression_value);
+            real_t zero = os_Int24ToReal(0);
+            
+            if (os_RealCompare(&expression_value, &zero) < 0 || 
+                os_RealCompare(&expression_value, &rounded) != 0) {
                 if (result->step_count < MAX_STEPS) {
                     CalculationStep* step = &result->steps[result->step_count++];
                     
@@ -432,28 +505,29 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                     sprintf(step->operation, "Error");
                     sprintf(step->result, "Undefined");
                 }
-                return 0;
+                return zero;
             }
             
-            int n = (int)round(expression_value);
-            double operation_result = 1;
+            int24_t n = os_RealToInt24(&expression_value);
+            real_t operation_result = os_Int24ToReal(1);
             
             for (int i = 2; i <= n; i++) {
-                operation_result *= i;
+                real_t i_real = os_Int24ToReal(i);
+                operation_result = os_RealMul(&operation_result, &i_real);
             }
             
-            double formatted_result = apply_arithmetic_format(operation_result);
+            real_t formatted_result = apply_arithmetic_format(operation_result);
             
             if (result->step_count < MAX_STEPS) {
                 // Record the factorial step
                 CalculationStep* step = &result->steps[result->step_count++];
                 
                 char expr_str[MAX_TOKEN_LENGTH];
-                format_number(expression_value, expr_str);
+                format_real(expression_value, expr_str);
                 
                 sprintf(step->expression, "%s!", expr_str);
                 sprintf(step->operation, "Calculate factorial of %s", expr_str);
-                format_number(formatted_result, step->result);
+                format_real(formatted_result, step->result);
             }
             
             return formatted_result;
@@ -461,7 +535,7 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         
         case NODE_PARENTHESIS: {
             // Evaluate the expression inside the parentheses
-            double value = evaluate_with_steps(node->parenthesis.expression, result);
+            real_t value = evaluate_with_steps(node->parenthesis.expression, result);
             
             // We don't add a separate step for parentheses
             return value;
@@ -469,7 +543,7 @@ double evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         
         default:
             // Should never happen
-            return 0;
+            return ZERO;
     }
 }
 
@@ -507,42 +581,53 @@ static const char* get_function_name(FunctionType func_type) {
  * @param argument The argument to the function.
  * @return The result of the function evaluation.
  */
-static double evaluate_function(FunctionType func_type, double argument) {
+static real_t evaluate_function(FunctionType func_type, real_t argument) {
     switch (func_type) {
         case FUNC_SIN:
-            return sin(argument);
+            return os_RealSinRad(&argument);
         
         case FUNC_COS:
-            return cos(argument);
+            return os_RealCosRad(&argument);
         
         case FUNC_TAN:
-            return tan(argument);
+            return os_RealTanRad(&argument);
         
-        case FUNC_LOG:
+        case FUNC_LOG: {
             // Check for domain error
-            if (argument <= 0) {
+            real_t zero = os_Int24ToReal(0);
+            if (os_RealCompare(&argument, &zero) <= 0) {
                 // Should report an error
-                return 0;
+                return zero;
             }
-            return log10(argument);
+            
+            // Convert ln(x) to log10(x) by dividing by ln(10)
+            real_t ln_result = os_RealLog(&argument);
+            real_t ten = os_Int24ToReal(10);
+            real_t ln_ten = os_RealLog(&ten);
+            return os_RealDiv(&ln_result, &ln_ten);
+        }
         
-        case FUNC_LN:
+        case FUNC_LN: {
             // Check for domain error
-            if (argument <= 0) {
+            real_t zero = os_Int24ToReal(0);
+            if (os_RealCompare(&argument, &zero) <= 0) {
                 // Should report an error
-                return 0;
+                return zero;
             }
-            return log(argument);
+            return os_RealLog(&argument);
+        }
         
-        case FUNC_SQRT:
+        case FUNC_SQRT: {
             // Check for domain error
-            if (argument < 0) {
+            real_t zero = os_Int24ToReal(0);
+            if (os_RealCompare(&argument, &zero) < 0) {
                 // Should report an error
-                return 0;
+                return zero;
             }
-            return sqrt(argument);
+            return os_RealSqrt(&argument);
+        }
         
         default:
-            return 0;
+            return ZERO;
     }
 }

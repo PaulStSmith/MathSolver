@@ -9,13 +9,15 @@ class Program
         Console.WriteLine("======================================");
 
         // Create a basic expression to test
-        string expression = @"e^0.15";
+        string expression = @"(.000125+30.78666-.080945)+(.855^2-.75/8)^3";
         Console.WriteLine($"Expression: {expression}");
         Console.WriteLine();
 
+        Console.WriteLine((.000125 + 30.78666 - .080945) + Math.Pow((Math.Pow(.855, 2) - .75 / 8) , 3));
+
         // Test with Normal arithmetic (no formatting)
         Console.WriteLine("Normal Arithmetic:");
-        DemoArithmeticMode(expression, ArithmeticType.Normal, 4, false);
+        DemoArithmeticMode(expression, ArithmeticType.Truncate, 4, false);
         Console.WriteLine();
 
         // Test with Round to significant digits

@@ -7,6 +7,7 @@
 #ifndef MATHSOLVER_H
 #define MATHSOLVER_H
 
+#include <ti/real.h>
 #include <stdbool.h>
 
 /* ============================== Constants ============================== */
@@ -35,16 +36,6 @@
 /** Small value for comparisons */
 #define EPSILON              1e-10
 
-/* Mathematical constants */
-/** Value of Pi */
-#define PI  3.14159265358979323846
-
-/** Base of natural logarithm (e) */
-#define E   2.71828182845904523536
-
-/** Golden ratio (phi) */
-#define PHI 1.61803398874989484820
-
 /* Colors */
 /** Background color (white) */
 #define COLOR_BACKGROUND     0xFF
@@ -60,6 +51,22 @@
 
 /** Gridline color (light gray) */
 #define COLOR_GRIDLINE       0xB5
+
+/* Mathematical constants */
+/** Value of Pi  = 3.14159265358979323846*/
+extern real_t PI;
+
+/** Base of natural logarithm (e) = 2.71828182845904523536*/
+extern real_t E;
+
+/** Golden ratio (phi) = 1.61803398874989484820 */
+extern real_t PHI;
+
+/** Zero value */
+extern real_t ZERO;
+
+/** The value of the natural logarithm of 10 */
+extern real_t LOG10;
 
 /* ============================== Types ============================== */
 
@@ -142,6 +149,7 @@ typedef struct {
     TokenType type;              /**< Type of token */
     char value[MAX_TOKEN_LENGTH];/**< Token value as string */
     SourcePosition position;     /**< Position in the input */
+    real_t real_value;           /**< Real value for number tokens */
 } Token;
 
 /**
@@ -157,7 +165,7 @@ struct ExpressionNode {
     SourcePosition position;     /**< Position in source */
     
     union {
-        double number_value;     /**< Value for number nodes */
+        real_t number_value;     /**< Value for number nodes */
         struct {
             char name[MAX_TOKEN_LENGTH]; /**< Variable name */
         } variable;
@@ -194,7 +202,7 @@ typedef struct {
  */
 typedef struct {
     char name[MAX_TOKEN_LENGTH]; /**< Variable name */
-    double value;                /**< Variable value */
+    real_t value;                /**< Variable value */
     bool is_defined;             /**< Whether the variable is defined */
 } Variable;
 
@@ -211,7 +219,7 @@ typedef struct {
  * Calculation result structure
  */
 typedef struct {
-    double value;                    /**< Final value */
+    real_t value;                    /**< Final value */
     int step_count;                  /**< Number of steps */
     CalculationStep steps[MAX_STEPS];/**< Step-by-step calculation */
     char formatted_result[MAX_TOKEN_LENGTH]; /**< Formatted result string */

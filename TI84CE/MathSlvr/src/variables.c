@@ -1,3 +1,4 @@
+#include <ti/real.h>
 #include "headers/log.h"
 #include "headers/mathsolver.h"
 
@@ -11,7 +12,7 @@ Variable variables[MAX_VARIABLES];
  * @param name The name of the variable.
  * @param value The value to assign to the variable.
  */
-void set_variable(const char* name, double value) {
+void set_variable(const char* name, real_t value) {
     // Check if variable already exists
     for (int i = 0; i < variable_count; i++) {
         if (strcmp(variables[i].name, name) == 0) {
@@ -40,7 +41,7 @@ void set_variable(const char* name, double value) {
  * @param found Pointer to a boolean that will be set to true if the variable is found, false otherwise.
  * @return The value of the variable, or 0 if not found.
  */
-double get_variable(const char* name, bool* found) {
+real_t get_variable(const char* name, bool* found) {
     // Check for built-in constants
     if (is_constant(name)) {
         *found = true;
@@ -62,7 +63,7 @@ double get_variable(const char* name, bool* found) {
     for (int i = 0; i < variable_count; i++) {
         if (strcmp(variables[i].name, name) == 0 && variables[i].is_defined) {
             *found = true;
-            double value = variables[i].value;
+            real_t value = variables[i].value;
             log_variable(name, value);
             return value;
         }
@@ -70,7 +71,7 @@ double get_variable(const char* name, bool* found) {
     
     *found = false;
     log_error("Variable not found");
-    return 0.0;
+    return ZERO;
 }
 
 /**

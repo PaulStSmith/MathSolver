@@ -35,8 +35,8 @@ int main(void) {
     mathsolver_init(); // Sets up the math solver environment and resources.
     
     // Set up some default variables for convenience
-    set_variable("x", 0); // Initializes variable 'x' with a default value of 0.
-    set_variable("y", 0); // Initializes variable 'y' with a default value of 0.
+    set_variable("x", ZERO); // Initializes variable 'x' with a default value of 0.
+    set_variable("y", ZERO); // Initializes variable 'y' with a default value of 0.
     
     // Set arithmetic mode (normal with 4 decimal places)
     set_arithmetic_mode(ARITHMETIC_NORMAL, 4, false); 

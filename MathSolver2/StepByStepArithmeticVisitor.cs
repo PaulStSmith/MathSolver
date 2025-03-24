@@ -32,7 +32,8 @@ public class StepByStepArithmeticVisitor : BaseArithmeticVisitor<StepByStepResul
     /// <returns>A result containing the value of the number and no steps.</returns>
     public override StepByStepResult VisitNumber(NumberNode node)
     {
-        return new StepByStepResult(node.Value, new List<CalculationStep>());
+        var value = FormatNumber( node.Value);
+        return new StepByStepResult(value, new List<CalculationStep>());
     }
 
     /// <summary>

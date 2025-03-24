@@ -27,7 +27,7 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
     /// <returns>The value of the number node.</returns>
     public override decimal VisitNumber(NumberNode node)
     {
-        return node.Value;
+        return FormatNumber(node.Value);
     }
 
     /// <summary>
@@ -46,7 +46,7 @@ public class ArithmeticVisitor : BaseArithmeticVisitor<decimal>
 
         if (Variables.TryGetValue(node.Name, out decimal value))
         {
-            return value;
+            return FormatNumber(value);
         }
 
         throw new EvaluationException($"Variable '{node.Name}' is not defined", node.Position);

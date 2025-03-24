@@ -97,7 +97,7 @@
   * @param name Variable name.
   * @param value Variable value.
   */
- void log_variable(const char* name, double value) {
+ void log_variable(const char* name, real_t value) {
      log_message("VAR: %s = %.6f", name, value);
  }
  
@@ -107,7 +107,7 @@
   * @param operation The operation description.
   * @param result The result of the operation.
   */
- void log_operation(const char* operation, double result) {
+ void log_operation(const char* operation, char* result) {
      log_message("OP: %s = %.6f", operation, result);
  }
  

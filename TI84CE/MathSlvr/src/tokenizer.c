@@ -1,3 +1,5 @@
+#include <string.h>
+#include <ti/real.h>
 #include "headers/log.h"
 #include "headers/mathsolver.h"
 #include "headers/tokenizer_public.h"
@@ -102,9 +104,52 @@ Token get_next_token(Tokenizer* tokenizer) {
             if (i >= MAX_TOKEN_LENGTH - 1) break;
         }
         
+        // Check for scientific notation (e.g., 1.23e5 or 1.23E5)
+        if ((tokenizer->input[tokenizer->position] == 'e' || 
+             tokenizer->input[tokenizer->position] == 'E') && 
+            i < MAX_TOKEN_LENGTH - 2) { // Need space for 'e' and at least one digit
+            
+            token.value[i++] = tokenizer->input[tokenizer->position];
+            advance_position(tokenizer);
+            
+            // Handle optional sign
+            if ((tokenizer->input[tokenizer->position] == '+' || 
+                 tokenizer->input[tokenizer->position] == '-') && 
+                i < MAX_TOKEN_LENGTH - 1) {
+                
+                token.value[i++] = tokenizer->input[tokenizer->position];
+                advance_position(tokenizer);
+            }
+            
+            // Ensure at least one digit after 'e'
+            bool has_exponent_digit = false;
+            
+            while (tokenizer->input[tokenizer->position] >= '0' && 
+                   tokenizer->input[tokenizer->position] <= '9') {
+                
+                has_exponent_digit = true;
+                token.value[i++] = tokenizer->input[tokenizer->position];
+                advance_position(tokenizer);
+                
+                // Prevent buffer overflow
+                if (i >= MAX_TOKEN_LENGTH - 1) break;
+            }
+            
+            // If no digits after 'e', this isn't valid scientific notation
+            if (!has_exponent_digit) {
+                // We need to backtrack to before the 'e'
+                tokenizer->position -= (token.value[i-1] == '+' || token.value[i-1] == '-') ? 2 : 1;
+                i -= (token.value[i-1] == '+' || token.value[i-1] == '-') ? 2 : 1;
+            }
+        }
+        
         token.value[i] = '\0';
         token.type = TOKEN_NUMBER;
         token.position.end = tokenizer->position - 1;
+        
+        // Convert string to real_t number
+        token.real_value = os_StrToReal(token.value, NULL);
+        
         log_token("num.", token.type, token.value);
         return token;
     }
@@ -141,8 +186,38 @@ Token get_next_token(Tokenizer* tokenizer) {
         // Check if this is a mathematical constant or function
         if (strcmp(token.value, "pi") == 0) {
             token.type = TOKEN_PI;
+            
+            // Set real_value to pi
+            real_t pi;
+            pi.exp = 0;
+            pi.sign = 0;
+            // Mantissa for pi (3.14159...)
+            pi.mant[0] = 0x31;
+            pi.mant[1] = 0x41;
+            pi.mant[2] = 0x59;
+            pi.mant[3] = 0x26;
+            pi.mant[4] = 0x53;
+            pi.mant[5] = 0x58;
+            pi.mant[6] = 0x97;
+            
+            token.real_value = pi;
         } else if (strcmp(token.value, "phi") == 0) {
             token.type = TOKEN_PHI;
+            
+            // Set real_value to phi (golden ratio)
+            real_t phi;
+            phi.exp = 0;
+            phi.sign = 0;
+            // Mantissa for phi (1.618...)
+            phi.mant[0] = 0x16;
+            phi.mant[1] = 0x18;
+            phi.mant[2] = 0x03;
+            phi.mant[3] = 0x39;
+            phi.mant[4] = 0x88;
+            phi.mant[5] = 0x74;
+            phi.mant[6] = 0x98;
+            
+            token.real_value = phi;
         } else if (strcmp(token.value, "sin") == 0 ||
             strcmp(token.value, "cos") == 0 ||
             strcmp(token.value, "tan") == 0 ||
@@ -176,8 +251,44 @@ Token get_next_token(Tokenizer* tokenizer) {
         case ')': token.type = TOKEN_RIGHT_PAREN; break;
         case ',': token.type = TOKEN_COMMA; break;
         case '!': token.type = TOKEN_FACTORIAL; break;
-        case (char)0xC4: token.type = TOKEN_PI; break;
-        case (char)0xD1: token.type = TOKEN_PHI; break;
+        case (char)0xC4: 
+            token.type = TOKEN_PI;
+            // Set real_value to pi (same as above)
+            {
+                real_t pi;
+                pi.exp = 0;
+                pi.sign = 0;
+                // Mantissa for pi (3.14159...)
+                pi.mant[0] = 0x31;
+                pi.mant[1] = 0x41;
+                pi.mant[2] = 0x59;
+                pi.mant[3] = 0x26;
+                pi.mant[4] = 0x53;
+                pi.mant[5] = 0x58;
+                pi.mant[6] = 0x97;
+                
+                token.real_value = pi;
+            }
+            break;
+        case (char)0xD1: 
+            token.type = TOKEN_PHI;
+            // Set real_value to phi (same as above)
+            {
+                real_t phi;
+                phi.exp = 0;
+                phi.sign = 0;
+                // Mantissa for phi (1.618...)
+                phi.mant[0] = 0x16;
+                phi.mant[1] = 0x18;
+                phi.mant[2] = 0x03;
+                phi.mant[3] = 0x39;
+                phi.mant[4] = 0x88;
+                phi.mant[5] = 0x74;
+                phi.mant[6] = 0x98;
+                
+                token.real_value = phi;
+            }
+            break;
         default:  token.type = TOKEN_NONE; break;
     }
 

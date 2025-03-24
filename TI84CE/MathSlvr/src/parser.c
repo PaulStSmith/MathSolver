@@ -157,8 +157,8 @@ static ExpressionNode* parse_primary(Tokenizer* tokenizer) {
             // Consume the token
             tokenizer->current_token = get_next_token(tokenizer);
             
-            // Convert string to double
-            double value = atof(token.value);
+            // Convert string to real_t
+            real_t value = os_StrToReal(token.value, NULL);
             
             return create_number_node(value, token.position);
         }
@@ -235,7 +235,7 @@ static ExpressionNode* parse_primary(Tokenizer* tokenizer) {
             ExpressionNode* expr = parse_factor(tokenizer);
             
             // Create a subtraction with 0 as the left operand
-            ExpressionNode* zero = create_number_node(0, operator_position);
+            ExpressionNode* zero = create_number_node(ZERO, operator_position);
             
             return create_binary_op_node(NODE_SUBTRACTION, zero, expr, operator_position);
         }
@@ -244,7 +244,7 @@ static ExpressionNode* parse_primary(Tokenizer* tokenizer) {
             // Handle error: unexpected token
             // In a real implementation, we would report an error
             // For now, return a default value
-            return create_number_node(0, token.position);
+            return create_number_node(ZERO, token.position);
     }
 }
 
@@ -319,7 +319,7 @@ static ExpressionNode* allocate_node(void) {
  * @param position The source position of the node.
  * @return Pointer to the created node, or NULL if allocation fails.
  */
-static ExpressionNode* create_number_node(double value, SourcePosition position) {
+static ExpressionNode* create_number_node(real_t value, SourcePosition position) {
     ExpressionNode* node = allocate_node();
     if (node == NULL) return NULL;
     
