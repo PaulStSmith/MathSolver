@@ -213,6 +213,13 @@ typedef struct {
     char expression[MAX_INPUT_LENGTH]; /**< Expression at this step */
     char operation[MAX_INPUT_LENGTH];  /**< Operation performed */
     char result[MAX_INPUT_LENGTH];     /**< Result of the operation */
+    char left_operand[MAX_TOKEN_LENGTH]; /**< Left operand (if applicable) */
+    char right_operand[MAX_TOKEN_LENGTH]; /**< Right operand (if applicable) */
+    enum {
+        STEP_BINARY, /**< Binary operation (e.g., addition, subtraction) */
+        STEP_UNARY_LEFT, /**< Unary operation with left operand (e.g., factorial) */
+        STEP_UNARY_RIGHT /**< Unary operation with right operand (e.g., sqrt, negate) */
+    } type; /**< Type of operation */
 } CalculationStep;
 
 /**

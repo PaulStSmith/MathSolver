@@ -320,21 +320,21 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             real_t right = evaluate_with_steps(node->binary_op.right, result);
             real_t operation_result = os_RealAdd(&left, &right);
             real_t formatted_result = apply_arithmetic_format(operation_result);
-            
+
             if (result->step_count < MAX_STEPS) {
-                // Record the addition step
                 CalculationStep* step = &result->steps[result->step_count++];
-                
-                char left_str[MAX_TOKEN_LENGTH];
-                char right_str[MAX_TOKEN_LENGTH];
+                char left_str[MAX_TOKEN_LENGTH], right_str[MAX_TOKEN_LENGTH];
                 format_real(left, left_str);
                 format_real(right, right_str);
-                
+
                 sprintf(step->expression, "%s + %s", left_str, right_str);
-                sprintf(step->operation, "Add %s and %s", left_str, right_str);
+                sprintf(step->operation, "Add");
                 format_real(formatted_result, step->result);
+                strcpy(step->left_operand, left_str);
+                strcpy(step->right_operand, right_str);
+                step->type = STEP_BINARY;
             }
-            
+
             return formatted_result;
         }
         
@@ -343,21 +343,21 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             real_t right = evaluate_with_steps(node->binary_op.right, result);
             real_t operation_result = os_RealSub(&left, &right);
             real_t formatted_result = apply_arithmetic_format(operation_result);
-            
+
             if (result->step_count < MAX_STEPS) {
-                // Record the subtraction step
                 CalculationStep* step = &result->steps[result->step_count++];
-                
-                char left_str[MAX_TOKEN_LENGTH];
-                char right_str[MAX_TOKEN_LENGTH];
+                char left_str[MAX_TOKEN_LENGTH], right_str[MAX_TOKEN_LENGTH];
                 format_real(left, left_str);
                 format_real(right, right_str);
-                
+
                 sprintf(step->expression, "%s - %s", left_str, right_str);
-                sprintf(step->operation, "Subtract %s from %s", right_str, left_str);
+                sprintf(step->operation, "Subtract");
                 format_real(formatted_result, step->result);
+                strcpy(step->left_operand, left_str);
+                strcpy(step->right_operand, right_str);
+                step->type = STEP_BINARY;
             }
-            
+
             return formatted_result;
         }
         
@@ -366,21 +366,21 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             real_t right = evaluate_with_steps(node->binary_op.right, result);
             real_t operation_result = os_RealMul(&left, &right);
             real_t formatted_result = apply_arithmetic_format(operation_result);
-            
+
             if (result->step_count < MAX_STEPS) {
-                // Record the multiplication step
                 CalculationStep* step = &result->steps[result->step_count++];
-                
-                char left_str[MAX_TOKEN_LENGTH];
-                char right_str[MAX_TOKEN_LENGTH];
+                char left_str[MAX_TOKEN_LENGTH], right_str[MAX_TOKEN_LENGTH];
                 format_real(left, left_str);
                 format_real(right, right_str);
-                
+
                 sprintf(step->expression, "%s * %s", left_str, right_str);
-                sprintf(step->operation, "Multiply %s by %s", left_str, right_str);
+                sprintf(step->operation, "Multiply");
                 format_real(formatted_result, step->result);
+                strcpy(step->left_operand, left_str);
+                strcpy(step->right_operand, right_str);
+                step->type = STEP_BINARY;
             }
-            
+
             return formatted_result;
         }
         
@@ -390,34 +390,33 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             
             real_t zero = os_Int24ToReal(0);
             if (os_RealCompare(&right, &zero) == 0) {
-                // Division by zero
                 if (result->step_count < MAX_STEPS) {
                     CalculationStep* step = &result->steps[result->step_count++];
-                    
                     sprintf(step->expression, "Division by zero");
                     sprintf(step->operation, "Error");
                     sprintf(step->result, "Undefined");
+                    step->type = STEP_BINARY;
                 }
                 return zero;
             }
             
             real_t operation_result = os_RealDiv(&left, &right);
             real_t formatted_result = apply_arithmetic_format(operation_result);
-            
+
             if (result->step_count < MAX_STEPS) {
-                // Record the division step
                 CalculationStep* step = &result->steps[result->step_count++];
-                
-                char left_str[MAX_TOKEN_LENGTH];
-                char right_str[MAX_TOKEN_LENGTH];
+                char left_str[MAX_TOKEN_LENGTH], right_str[MAX_TOKEN_LENGTH];
                 format_real(left, left_str);
                 format_real(right, right_str);
-                
+
                 sprintf(step->expression, "%s / %s", left_str, right_str);
-                sprintf(step->operation, "Divide %s by %s", left_str, right_str);
+                sprintf(step->operation, "Divide");
                 format_real(formatted_result, step->result);
+                strcpy(step->left_operand, left_str);
+                strcpy(step->right_operand, right_str);
+                step->type = STEP_BINARY;
             }
-            
+
             return formatted_result;
         }
         
@@ -500,10 +499,10 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
                 os_RealCompare(&expression_value, &rounded) != 0) {
                 if (result->step_count < MAX_STEPS) {
                     CalculationStep* step = &result->steps[result->step_count++];
-                    
                     sprintf(step->expression, "Factorial domain error");
                     sprintf(step->operation, "Error");
                     sprintf(step->result, "Undefined");
+                    step->type = STEP_UNARY_LEFT;
                 }
                 return zero;
             }
@@ -517,19 +516,20 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             }
             
             real_t formatted_result = apply_arithmetic_format(operation_result);
-            
+
             if (result->step_count < MAX_STEPS) {
-                // Record the factorial step
                 CalculationStep* step = &result->steps[result->step_count++];
-                
                 char expr_str[MAX_TOKEN_LENGTH];
                 format_real(expression_value, expr_str);
-                
+
                 sprintf(step->expression, "%s!", expr_str);
-                sprintf(step->operation, "Calculate factorial of %s", expr_str);
+                sprintf(step->operation, "Factorial");
                 format_real(formatted_result, step->result);
+                strcpy(step->left_operand, expr_str);
+                step->right_operand[0] = '\0'; // No right operand
+                step->type = STEP_UNARY_LEFT;
             }
-            
+
             return formatted_result;
         }
         
