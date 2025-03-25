@@ -227,6 +227,7 @@ typedef struct {
  */
 typedef struct {
     real_t value;                    /**< Final value */
+    real_t original_value;           /**< Stores the "Normal" mode result */
     int step_count;                  /**< Number of steps */
     CalculationStep steps[MAX_STEPS];/**< Step-by-step calculation */
     char formatted_result[MAX_TOKEN_LENGTH]; /**< Formatted result string */

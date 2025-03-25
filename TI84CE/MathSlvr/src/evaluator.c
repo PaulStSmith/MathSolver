@@ -204,7 +204,15 @@ bool evaluate_expression_string(const char* input, CalculationResult* result) {
     result->use_significant_digits = current_use_significant_digits;
     
     // Evaluate with steps
-    result->value = evaluate_with_steps(root, result);
+    CalculationResult temp_result = {0}; // Temporary result for "Normal" mode
+    ArithmeticType original_mode = current_arithmetic_type;
+
+    current_arithmetic_type = ARITHMETIC_NORMAL;
+    evaluate_with_steps(root, &temp_result, false); // No step recording
+    result->original_value = temp_result.value;
+
+    current_arithmetic_type = original_mode;
+    evaluate_with_steps(root, result, true); // Record steps
     
     // Format the final result
     format_real(result->value, result->formatted_result);
@@ -268,9 +276,10 @@ char* result_to_string(CalculationResult* result) {
  * 
  * @param node Pointer to the expression node to evaluate.
  * @param result Pointer to the structure to store the evaluation steps.
+ * @param record_steps Boolean flag to indicate whether to record steps.
  * @return The result of the evaluation.
  */
-real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
+real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result, bool record_steps) {
     log_debug("Evaluating expression with steps.");
     log_message("Node: %s", node_to_string(node));
     log_message("Result: %s", result_to_string(result));    
@@ -297,7 +306,7 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             bool found;
             real_t value = get_variable(node->variable.name, &found);
             
-            if (found && result->step_count < MAX_STEPS) {
+            if (found && result->step_count < MAX_STEPS && record_steps) {
                 // Record the variable substitution step
                 CalculationStep* step = &result->steps[result->step_count++];
                 
@@ -316,12 +325,12 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         }
         
         case NODE_ADDITION: {
-            real_t left = evaluate_with_steps(node->binary_op.left, result);
-            real_t right = evaluate_with_steps(node->binary_op.right, result);
+            real_t left = evaluate_with_steps(node->binary_op.left, result, record_steps);
+            real_t right = evaluate_with_steps(node->binary_op.right, result, record_steps);
             real_t operation_result = os_RealAdd(&left, &right);
             real_t formatted_result = apply_arithmetic_format(operation_result);
 
-            if (result->step_count < MAX_STEPS) {
+            if (result->step_count < MAX_STEPS && record_steps) {
                 CalculationStep* step = &result->steps[result->step_count++];
                 char left_str[MAX_TOKEN_LENGTH], right_str[MAX_TOKEN_LENGTH];
                 format_real(left, left_str);
@@ -339,12 +348,12 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         }
         
         case NODE_SUBTRACTION: {
-            real_t left = evaluate_with_steps(node->binary_op.left, result);
-            real_t right = evaluate_with_steps(node->binary_op.right, result);
+            real_t left = evaluate_with_steps(node->binary_op.left, result, record_steps);
+            real_t right = evaluate_with_steps(node->binary_op.right, result, record_steps);
             real_t operation_result = os_RealSub(&left, &right);
             real_t formatted_result = apply_arithmetic_format(operation_result);
 
-            if (result->step_count < MAX_STEPS) {
+            if (result->step_count < MAX_STEPS && record_steps) {
                 CalculationStep* step = &result->steps[result->step_count++];
                 char left_str[MAX_TOKEN_LENGTH], right_str[MAX_TOKEN_LENGTH];
                 format_real(left, left_str);
@@ -362,12 +371,12 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         }
         
         case NODE_MULTIPLICATION: {
-            real_t left = evaluate_with_steps(node->binary_op.left, result);
-            real_t right = evaluate_with_steps(node->binary_op.right, result);
+            real_t left = evaluate_with_steps(node->binary_op.left, result, record_steps);
+            real_t right = evaluate_with_steps(node->binary_op.right, result, record_steps);
             real_t operation_result = os_RealMul(&left, &right);
             real_t formatted_result = apply_arithmetic_format(operation_result);
 
-            if (result->step_count < MAX_STEPS) {
+            if (result->step_count < MAX_STEPS && record_steps) {
                 CalculationStep* step = &result->steps[result->step_count++];
                 char left_str[MAX_TOKEN_LENGTH], right_str[MAX_TOKEN_LENGTH];
                 format_real(left, left_str);
@@ -385,12 +394,12 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         }
         
         case NODE_DIVISION: {
-            real_t left = evaluate_with_steps(node->binary_op.left, result);
-            real_t right = evaluate_with_steps(node->binary_op.right, result);
+            real_t left = evaluate_with_steps(node->binary_op.left, result, record_steps);
+            real_t right = evaluate_with_steps(node->binary_op.right, result, record_steps);
             
             real_t zero = os_Int24ToReal(0);
             if (os_RealCompare(&right, &zero) == 0) {
-                if (result->step_count < MAX_STEPS) {
+                if (result->step_count < MAX_STEPS && record_steps) {
                     CalculationStep* step = &result->steps[result->step_count++];
                     sprintf(step->expression, "Division by zero");
                     sprintf(step->operation, "Error");
@@ -403,7 +412,7 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             real_t operation_result = os_RealDiv(&left, &right);
             real_t formatted_result = apply_arithmetic_format(operation_result);
 
-            if (result->step_count < MAX_STEPS) {
+            if (result->step_count < MAX_STEPS && record_steps) {
                 CalculationStep* step = &result->steps[result->step_count++];
                 char left_str[MAX_TOKEN_LENGTH], right_str[MAX_TOKEN_LENGTH];
                 format_real(left, left_str);
@@ -421,12 +430,12 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         }
         
         case NODE_EXPONENT: {
-            real_t base = evaluate_with_steps(node->binary_op.left, result);
-            real_t exponent = evaluate_with_steps(node->binary_op.right, result);
+            real_t base = evaluate_with_steps(node->binary_op.left, result, record_steps);
+            real_t exponent = evaluate_with_steps(node->binary_op.right, result, record_steps);
             real_t operation_result = os_RealPow(&base, &exponent);
             real_t formatted_result = apply_arithmetic_format(operation_result);
             
-            if (result->step_count < MAX_STEPS) {
+            if (result->step_count < MAX_STEPS && record_steps) {
                 // Record the exponentiation step
                 CalculationStep* step = &result->steps[result->step_count++];
                 
@@ -444,7 +453,7 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         }
         
         case NODE_FUNCTION: {
-            real_t argument = evaluate_with_steps(node->function.argument, result);
+            real_t argument = evaluate_with_steps(node->function.argument, result, record_steps);
             const char* func_name = get_function_name(node->function.func_type);
             
             // Handle domain errors
@@ -460,7 +469,7 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             }
             
             if (domain_error) {
-                if (result->step_count < MAX_STEPS) {
+                if (result->step_count < MAX_STEPS && record_steps) {
                     CalculationStep* step = &result->steps[result->step_count++];
                     
                     sprintf(step->expression, "%s domain error", func_name);
@@ -473,7 +482,7 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             real_t operation_result = evaluate_function(node->function.func_type, argument);
             real_t formatted_result = apply_arithmetic_format(operation_result);
             
-            if (result->step_count < MAX_STEPS) {
+            if (result->step_count < MAX_STEPS && record_steps) {
                 // Record the function evaluation step
                 CalculationStep* step = &result->steps[result->step_count++];
                 
@@ -489,7 +498,7 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         }
         
         case NODE_FACTORIAL: {
-            real_t expression_value = evaluate_with_steps(node->factorial.expression, result);
+            real_t expression_value = evaluate_with_steps(node->factorial.expression, result, record_steps);
             
             // Check if value is a non-negative integer
             real_t rounded = os_RealRoundInt(&expression_value);
@@ -497,7 +506,7 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             
             if (os_RealCompare(&expression_value, &zero) < 0 || 
                 os_RealCompare(&expression_value, &rounded) != 0) {
-                if (result->step_count < MAX_STEPS) {
+                if (result->step_count < MAX_STEPS && record_steps) {
                     CalculationStep* step = &result->steps[result->step_count++];
                     sprintf(step->expression, "Factorial domain error");
                     sprintf(step->operation, "Error");
@@ -517,7 +526,7 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
             
             real_t formatted_result = apply_arithmetic_format(operation_result);
 
-            if (result->step_count < MAX_STEPS) {
+            if (result->step_count < MAX_STEPS && record_steps) {
                 CalculationStep* step = &result->steps[result->step_count++];
                 char expr_str[MAX_TOKEN_LENGTH];
                 format_real(expression_value, expr_str);
@@ -535,7 +544,7 @@ real_t evaluate_with_steps(ExpressionNode* node, CalculationResult* result) {
         
         case NODE_PARENTHESIS: {
             // Evaluate the expression inside the parentheses
-            real_t value = evaluate_with_steps(node->parenthesis.expression, result);
+            real_t value = evaluate_with_steps(node->parenthesis.expression, result, record_steps);
             
             // We don't add a separate step for parentheses
             return value;
