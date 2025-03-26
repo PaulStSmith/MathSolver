@@ -502,6 +502,13 @@ void input_state(void) {
 }
 
 /**
+ * Sets the calculator state to settings mode.
+ */
+void settings_state(void) {
+    current_state = STATE_SETTINGS;
+}
+
+/**
  * Exits the calculator UI.
  */
 void leave(void) {
@@ -671,6 +678,7 @@ static void register_precision_kb(void) {
  */
 static void register_result_kb(void) {
     kb_clear();
+    kb_register_press(KEY_MODE, settings_state);
     kb_register_press(KEY_ENTER, input_state);
     kb_register_press(KEY_CLEAR, leave);
     kb_register_press(KEY_UP, scroll_up);

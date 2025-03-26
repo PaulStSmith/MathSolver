@@ -163,6 +163,7 @@ typedef struct ExpressionNode ExpressionNode;
 struct ExpressionNode {
     NodeType type;               /**< Type of node */
     SourcePosition position;     /**< Position in source */
+    real_t normal_value;         /**< Normal arithmetic value */
     
     union {
         real_t number_value;     /**< Value for number nodes */

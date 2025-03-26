@@ -201,15 +201,20 @@ bool evaluate_expression_string(const char* input, CalculationResult* result) {
     result->precision = current_precision;
     result->use_significant_digits = current_use_significant_digits;
 
-    ArithmeticType currentMode = get_arithmetic_mode();
-    int currentPrecision = get_precision();
-    bool currentUseSigDigits = get_use_significant_digits();
+    ArithmeticType cm = get_arithmetic_mode();
     
-    if (currentMode != ARITHMETIC_NORMAL) {
+    if (cm != ARITHMETIC_NORMAL) {
+        /*
+         * We evaluate in normal mode only if the current mode is not normal.
+         */
+        int cp = get_precision();
+        bool cd = get_use_significant_digits();
+
         set_arithmetic_mode(ARITHMETIC_NORMAL, 9, false);
+        result->normal_value = evaluate_expression(root);
+        set_arithmetic_mode(cm, cp, cd);
     }
-    
-    // Evaluate with steps
+
     result->value = evaluate_with_steps(root, result);
     
     // Format the final result
