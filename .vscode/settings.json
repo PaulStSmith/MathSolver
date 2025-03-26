@@ -5,6 +5,7 @@
         "arithmetic_public.h": "c",
         "keypadc.h": "c",
         "ti84ce_keys.h": "c",
-        "ui_private.h": "c"
+        "ui_private.h": "c",
+        "parser_public.h": "c"
     }
 }

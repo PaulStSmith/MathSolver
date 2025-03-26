@@ -133,7 +133,7 @@ void print_centered(const char* str) {
 void print_centeredln(const char* str) {
     int len = strlen(str);
     int padding = (SCREEN_COLS - len) / 2;
-    print_formatln("%*s%s", padding, "", str);
+    println_format("%*s%s", padding, "", str);
 }
 
 /**
@@ -183,7 +183,7 @@ void print_format(const char* format, ...) {
  * @param format The format string to print.
  * @param ... Additional arguments to format.
  */
-void print_formatln(const char* format, ...) {
+void println_format(const char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
@@ -216,7 +216,7 @@ void print_format_centered(const char* format, ...) {
  * @param format The format string to print.
  * @param ... Additional arguments to format.
  */
-void print_format_truncated(const char* format, ...) {
+void println_format_truncated(const char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
@@ -224,6 +224,39 @@ void print_format_truncated(const char* format, ...) {
     va_end(args);
     
     print_truncated(buffer, SCREEN_COLS - 1);
+}
+
+void print_right(const char* str) {
+    unsigned int curRow;
+    unsigned int curCol;
+    os_GetCursorPos(&curRow, &curCol);
+    os_SetCursorPos(curRow, SCREEN_COLS - strlen(str));
+    print(str);
+}
+
+void println_right(const char* str) {
+    print_right(str);
+    new_line();
+}
+
+void print_format_right(const char* format, ...) {
+    char buffer[255];
+    va_list args;
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    va_end(args);
+    
+    print_right(buffer);
+}
+
+void println_format_right(const char* format, ...) {
+    char buffer[255];
+    va_list args;
+    va_start(args, format);
+    vsprintf(buffer, format, args);
+    va_end(args);
+    
+    println_right(buffer);
 }
 
 /**
@@ -277,14 +310,14 @@ void show_input_prompt(void) {
     int precision       = get_precision();
     bool use_sig_digits = get_use_significant_digits();
     
-    print_formatln("Mode: %s", 
+    println_format("Mode: %s", 
                     mode == ARITHMETIC_NORMAL ? "Normal" : 
                     mode == ARITHMETIC_TRUNCATE ? "Truncate" : "Round");
     
     if (mode == ARITHMETIC_NORMAL)
         println("Prec: Default");
     else
-        print_formatln("Prec: %d %s", 
+        println_format("Prec: %d %s", 
                 precision,
                 use_sig_digits ? "sig" : "dec");
 
@@ -292,19 +325,88 @@ void show_input_prompt(void) {
     println("Enter expression:");
 }
 
+void show_calculation_result(CalculationResult* result) {
+    int cnt = result->step_count;
+    if (step_scroll_position < 0) {
+        step_scroll_position = cnt;
+    } else if (step_scroll_position > cnt)
+    {
+        step_scroll_position = 0;
+    }
+    
+    clear_screen();
+    os_SetCursorPos(0,0);
+    print_format("%d/%d", step_scroll_position, cnt);
+    print_right(get_mode_str());
+        
+    char diff_str[MAX_TOKEN_LENGTH];
+    ArithmeticType mode = get_arithmetic_mode();
+    if (mode != ARITHMETIC_NORMAL) {
+        real_t left = result->normal_value;
+        real_t right = result->value;
+        real_t diff = os_RealSub(&left, &right);
+        format_real(diff, diff_str);        
+    }
+
+    char rst[MAX_TOKEN_LENGTH];
+    format_real(result->value, rst);
+    
+    if (step_scroll_position == 0) {
+        os_SetCursorPos(2, 0);
+        println("Formatado:");
+        print_right(rst);
+        
+        if (mode != ARITHMETIC_NORMAL) {
+            os_SetCursorPos(4, 0);
+            char norm[MAX_TOKEN_LENGTH];
+            format_real(result->normal_value, norm);
+            println("Formatted:");
+            print_right(norm);
+            os_SetCursorPos(6, 0);
+            println("Diff:");
+            print_right(diff_str);
+        }
+    }
+    else
+    {
+        CalculationStep* step = &result->steps[step_scroll_position - 1];
+        os_SetCursorPos(1, 0);
+        println_format_right("Oper: %s", step->operation);
+        if(step->type == STEP_BINARY) {
+            print("Left:");
+            println_right(step->left_operand);
+            print("Right:");
+            println_right(step->right_operand);
+        } else if(step->type == STEP_UNARY_LEFT) {
+            print("Operand:");
+            println_right(step->left_operand);
+            new_line();
+        } else if (step->type == STEP_UNARY_RIGHT)
+        {
+            print("Operand:");
+            println_right(step->right_operand);
+            new_line();
+        }
+        print("Result:");
+        println_right(step->result);
+    }
+
+    print_footer("\xef\xf0:Scroll <MODE>:Settings");
+}
+
 /**
  * Displays the result of a calculation, including steps if available.
  * 
  * @param result Pointer to the CalculationResult structure containing the result data.
  */
-void show_calculation_result(CalculationResult* result) {
+static void old_show_calculation_result(CalculationResult* result) {
     draw_header();
     
     // Show the expression and result
-    print_format_truncated("Expr : %s", current_expression);
-    print_format_truncated("Ans  : %s", result->formatted_result);
-    print_format_truncated("Mode : %s", get_mode_str());
-    print_format_truncated("Steps: %d", result->step_count);
+    println_format_truncated("Expr : %s", current_expression);
+    println_format_truncated("Ans  : %s", result->formatted_result);
+    println_format_truncated("Mode : %s", get_mode_str());
+    println_format_truncated("Steps: %d", result->step_count);
     
     draw_horizontal_line();
     os_SetCursorPos(7, 0);
@@ -321,7 +423,7 @@ void show_calculation_result(CalculationResult* result) {
         
         // Display the current step
         if (step_scroll_position < result->step_count) {
-            print_format_truncated("%d. %s = %s", 
+            println_format_truncated("%d. %s = %s", 
                 (step_scroll_position + 1), 
                 result->steps[step_scroll_position].expression, 
                 result->steps[step_scroll_position].result);
@@ -363,7 +465,7 @@ void print_mode(void){
     ArithmeticType mode = get_arithmetic_mode();
 
     os_SetCursorPos(4, 0);
-    print_formatln("1. Mode: %s", 
+    println_format("1. Mode: %s", 
         mode == ARITHMETIC_NORMAL ?   "Normal   " : 
         mode == ARITHMETIC_TRUNCATE ? "Truncate " : 
                                       "Round    ");
@@ -378,9 +480,9 @@ void print_precision(void) {
 
     os_SetCursorPos(5, 0);
     if (mode == ARITHMETIC_NORMAL)
-        print_formatln("2. Precision: Default");
+        println_format("2. Precision: Default");
     else
-        print_formatln("2. Precision: %-*d  ", 8, precision);
+        println_format("2. Precision: %-*d  ", 8, precision);
 }
 
 /**
@@ -392,9 +494,9 @@ void print_precision_type(void) {
 
     os_SetCursorPos(6, 0);
     if (mode == ARITHMETIC_NORMAL)
-        print_formatln("3. Type: %-*s", 10, "N/A");
+        println_format("3. Type: %-*s", 10, "N/A");
     else
-        print_formatln("3. Type: %s", use_sig_digits ? "Sig.Digits" : "Dec.Places");
+        println_format("3. Type: %s", use_sig_digits ? "Sig.Digits" : "Dec.Places");
 }
 
 /**
