@@ -325,6 +325,7 @@ static ExpressionNode* create_number_node(real_t value, SourcePosition position)
     
     node->type = NODE_NUMBER;
     node->number_value = value;
+    node->normal_value = value;
     node->position = position;
     
     return node;

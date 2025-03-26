@@ -329,7 +329,7 @@ void show_calculation_result(CalculationResult* result) {
     }
     
     // Navigation hints
-    print_footer("<MODE>:Input <CLEAR>:exit");
+    print_footer("<ENT.>:Input <CLEAR>:exit");
 }
 
 /**
@@ -620,11 +620,11 @@ static void regiter_settings_kb(void) {
     kb_register_press(KEY_1, toggle_arithmetic_mode);
     kb_register_press(KEY_2, adjust_precision);
     kb_register_press(KEY_3, toggle_significant_digits);
-    kb_register_press(KEY_MODE, input_state);
+    kb_register_press(KEY_ENTER, input_state);
     kb_register_press(KEY_CLEAR, leave);
     waiting = false;
 
-    print_footer("<MODE>:Input <1-3>:Change");
+    print_footer("<ENT.>:Input <1-3>:Change");
 }
 
 /**
@@ -671,11 +671,11 @@ static void register_precision_kb(void) {
  */
 static void register_result_kb(void) {
     kb_clear();
-    kb_register_press(KEY_MODE, input_state);
+    kb_register_press(KEY_ENTER, input_state);
     kb_register_press(KEY_CLEAR, leave);
     kb_register_press(KEY_UP, scroll_up);
     kb_register_press(KEY_DOWN, scroll_down);
-    print_footer("<MODE>:Input <CLEAR>:exit");
+    print_footer("<ENT.>:Input <CLEAR>:exit");
 }
 
 /**

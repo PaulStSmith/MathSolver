@@ -226,13 +226,14 @@ typedef struct {
  * Calculation result structure
  */
 typedef struct {
-    real_t value;                    /**< Final value */
-    int step_count;                  /**< Number of steps */
-    CalculationStep steps[MAX_STEPS];/**< Step-by-step calculation */
-    char formatted_result[MAX_TOKEN_LENGTH]; /**< Formatted result string */
     ArithmeticType arithmetic_mode;  /**< Arithmetic mode used */
     int precision;                   /**< Precision used */
     bool use_significant_digits;     /**< Whether significant digits were used */
+    real_t value;                    /**< Final value */
+    real_t normal_value;             /**< Normal arithmetic */
+    int step_count;                  /**< Number of steps */
+    char formatted_result[MAX_TOKEN_LENGTH]; /**< Formatted result string */
+    CalculationStep steps[MAX_STEPS];/**< Step-by-step calculation */
 } CalculationResult;
 
 extern ArithmeticType current_arithmetic_type;

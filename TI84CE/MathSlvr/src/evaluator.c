@@ -6,8 +6,6 @@
 #include "headers/mathsolver.h"
 #include "headers/evaluator_private.h"
 
-/* ============================== Expression Evaluation ============================== */
-
 /*
  *  ___                        _            ___          _           _   _          
  * | __|_ ___ __ _ _ ___ _____(_)___ _ _   | __|_ ____ _| |_  _ __ _| |_(_)___ _ _  
@@ -196,12 +194,20 @@ bool evaluate_expression_string(const char* input, CalculationResult* result) {
     // Parse the expression
     ExpressionNode* root = parse_expression_string(input);
     if (root == NULL) return false;
-    
+
     // Initialize the result
     memset(result, 0, sizeof(CalculationResult));
     result->arithmetic_mode = current_arithmetic_type;
     result->precision = current_precision;
     result->use_significant_digits = current_use_significant_digits;
+
+    ArithmeticType currentMode = get_arithmetic_mode();
+    int currentPrecision = get_precision();
+    bool currentUseSigDigits = get_use_significant_digits();
+    
+    if (currentMode != ARITHMETIC_NORMAL) {
+        set_arithmetic_mode(ARITHMETIC_NORMAL, 9, false);
+    }
     
     // Evaluate with steps
     result->value = evaluate_with_steps(root, result);
