@@ -38,7 +38,7 @@ A calculator-optimized port of the MathSolver engine, providing enhanced mathema
 - Multiple calculation modes
 - Precision control
 
-[View MathSolver for TI-84 CE Documentation](./TI84CE/mathslvr/readme.md)
+[View MathSolver for TI-84 CE Documentation](./TI84CE/MathSlvr/readme.md)
 
 ### ASCII Chart Viewer
 
