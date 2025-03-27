@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "screen.h": "c",
-        "keypadc.h": "c"
+        "keypadc.h": "c",
+        "kb_mapping.h": "c"
     }
 }
