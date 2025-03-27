@@ -94,7 +94,7 @@ void log_message(const char* format, ...) {
     // Add newline
     strcat(debug_buffer, "\n");
 
-    dbg_printf(debug_buffer);
+    dbg_printf("%s", debug_buffer);
     
     // Append the log
     uint8_t handle = logger_get_handle("a");

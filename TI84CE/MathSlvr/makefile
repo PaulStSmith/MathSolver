@@ -19,6 +19,7 @@ include $(shell cedev-config --makefile)
 
 # Default to debug mode for development
 DEBUG ?= 1
+export DEBUG
 
 # Enable verbose output to see all commands
 VERBOSE ?= 0
