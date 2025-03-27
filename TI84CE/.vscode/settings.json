@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "screen.h": "c",
+        "keypadc.h": "c"
+    }
+}
