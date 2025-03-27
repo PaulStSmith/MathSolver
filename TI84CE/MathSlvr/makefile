@@ -1,8 +1,15 @@
 # Makefile for TI-84 CE Math Solver
 # Based on the CE C/C++ Toolchain standard template
 
-# Application name
+# Application definition
 NAME = MATHSLVR
+DESCRIPTION = "TI-84 CE Math Solver"
+#ICON = icon.png
+
+# Output Configuration
+COMPRESSED = YES			# Compress the output file
+COMPRESSED_MODE = zx0		# Use the zx0 compression algorithm
+ARCHIVED = YES				# Build the program to be stored in the archive
 
 # Object files
 OBJS = $(patsubst %.c,%.o,$(C_FILES))
@@ -13,12 +20,25 @@ include $(shell cedev-config --makefile)
 # Default to debug mode for development
 DEBUG ?= 1
 
+# Enable verbose output to see all commands
+VERBOSE ?= 0
+ifeq ($(VERBOSE),1)
+	Q :=
+else
+	Q := @
+endif
+
 # Compiler flags
 CFLAGS += -Wall        # Enable all compiler's warning messages
 CFLAGS += -Wextra      # Enable additional warning messages not covered by -Wall
 CFLAGS += -pedantic    # Enforce strict compliance with the C standard
 CFLAGS += -std=c11     # Specify the C language standard to use (C11 in this case)
 CFLAGS += -Os          # Optimize for size, reducing the binary size
+
+# Add the DEBUG preprocessor definition when DEBUG=1
+ifeq ($(DEBUG),1)
+	CFLAGS += -DDEBUG	# Define the DEBUG preprocessor symbol
+endif
 
 # Additional libraries needed for the project
 LIBS += -lc         # Standard C library

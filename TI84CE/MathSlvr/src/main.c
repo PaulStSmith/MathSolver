@@ -8,11 +8,13 @@
 
 #include <tice.h>
 #include <graphx.h>
+#include <ti/screen.h>
 #include <keypadc.h>
 
 #include "headers/mathsolver.h"
 #include "headers/ui.h"
 #include "headers/log.h"
+#include "headers/main_private.h"
 
 /**
  * @brief Main function of the MathSolver application.
@@ -25,28 +27,35 @@
  */
 int main(void) {
 
-    // Initialize screen and keyboard
-    os_ClrHome();
-    kb_Reset();
-
-    logger_init();      // Initializes the debug logger for logging messages.
-    
-    // Initialize the math solver
-    mathsolver_init(); // Sets up the math solver environment and resources.
+    logger_init();
+    screen_init();
+    mathsolver_init();
     
     // Set up some default variables for convenience
     set_variable("x", ZERO); // Initializes variable 'x' with a default value of 0.
     set_variable("y", ZERO); // Initializes variable 'y' with a default value of 0.
     
-    // Set arithmetic mode (normal with 4 decimal places)
+    // Set arithmetic mode to normal.
+    // Note: Setting up normal arithmetic the number of decimal places is ignored, as is the use of significant digits.
     set_arithmetic_mode(ARITHMETIC_NORMAL, 4, false); 
-    // Configures arithmetic mode to normal with 4 decimal places and no scientific notation.
     
     // Run the calculator UI
-    run_calculator_ui(); // Launches the user interface for the calculator.
+    run_calculator_ui();
     
     // Clean up
-    mathsolver_cleanup(); // Frees resources and performs cleanup operations.
+    mathsolver_cleanup(); 
+    logger_close();
     
     return 0; // Exit the program successfully.
+}
+
+static void screen_init(void){
+    log_debug("Initializing screen");
+    os_ClrHome();
+    kb_Reset();
+    os_FontSelect(os_SmallFont);
+    log_message("Font ID: %d", (int)os_FontGetID());
+    uint24_t width = os_FontGetWidth("W");
+    uint24_t height = os_FontGetHeight();
+    log_message("Font size: (%d x %d)", width, height);
 }

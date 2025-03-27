@@ -7,7 +7,6 @@
  */
 
 #include "headers/log.h"
-#include "headers/mathsolver.h"
 #include "headers/mathsolver_private.h"
 
 /* ============================== Global Variables ============================== */
@@ -46,6 +45,10 @@ void mathsolver_init(void) {
     log_debug("MathSolver initialized");
 }
 
+/**
+ * Initializes the math solver constants.
+ * Sets up the values for PI, E, PHI, ZERO, and LOG10.
+ */
 static void init_constants(void)
 {
     real_t x = os_FloatToReal(10.0);

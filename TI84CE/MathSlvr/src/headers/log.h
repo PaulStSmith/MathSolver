@@ -12,6 +12,7 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include <ti/real.h>
 #include "log_public.h"
 
 #endif // LOG_H

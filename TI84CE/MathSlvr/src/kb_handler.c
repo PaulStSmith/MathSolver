@@ -181,6 +181,7 @@ void kb_clear(void) {
     for (int i = 0; i < KB_MAX_CALLBACKS; i++) {
         callbacks[i].active = false;
     }
+    debounce();
 }
 
 /**
@@ -320,6 +321,14 @@ void kb_wait_any(void) {
         kb_Scan();
         delay(50);
     }
+    debounce();
+}
+
+/**
+ * Waits until no keys are pressed.
+ */
+void debounce(void) {
+    last_key_pressed = 0;
     while (kb_AnyKey()) {
         kb_Scan();
         delay(50);

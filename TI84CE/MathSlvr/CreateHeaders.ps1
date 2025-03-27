@@ -28,6 +28,12 @@ if (-not $PrivateOutputFile) {
     $PrivateOutputFile = Join-Path $headersDir "$($fileBaseName)_private.h"
 }
 
+# Check if a base header file exists (myfile.h)
+$fileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($SourceFile)
+$baseHeaderFile = Join-Path $headersDir "$($fileBaseName).h"
+$baseHeaderExists = Test-Path -Path $baseHeaderFile
+$baseHeaderFileName = "$($fileBaseName).h"
+
 # Read the source file
 $sourceContent = Get-Content -Path $SourceFile -Raw
 
@@ -44,7 +50,69 @@ if (Test-Path -Path $PrivateOutputFile) {
 $publicGuard = [System.IO.Path]::GetFileNameWithoutExtension($OutputFile).ToUpper() + "_H"
 $privateGuard = [System.IO.Path]::GetFileNameWithoutExtension($PrivateOutputFile).ToUpper() + "_H"
 
-# First, strip comments to avoid false positives
+# First, check if we need to regenerate the header files by comparing timestamps
+$sourceLastModified = (Get-Item -Path $SourceFile).LastWriteTime
+
+# Flag to track if we need to regenerate
+$needsRegeneration = $true
+
+# Check public header timestamp if it exists
+if (Test-Path -Path $OutputFile) {
+    $publicLastModified = (Get-Item -Path $OutputFile).LastWriteTime
+    if ($publicLastModified -gt $sourceLastModified) {
+        $needsRegeneration = $false
+    }
+}
+
+# Check private header timestamp if it exists
+if (-not $needsRegeneration -and (Test-Path -Path $PrivateOutputFile)) {
+    $privateLastModified = (Get-Item -Path $PrivateOutputFile).LastWriteTime
+    if ($privateLastModified -lt $sourceLastModified) {
+        $needsRegeneration = $true
+    }
+}
+
+# If source file hasn't been modified since the header files were last generated, we can skip
+if (-not $needsRegeneration) {
+    Write-Host "Header files are up to date. Skipping generation."
+    exit 0
+}
+
+# Extract only the last documentation comment before each function
+# This pattern looks for function declarations
+$functionDeclarationPattern = '(?:static\s+)?(?:\w+(?:\s+\w+)*(?:\s*\*+\s*|\s+))(\w+)\s*\([^{]*\)\s*(?:{|[\r\n]\s*{)'
+$functionMatches = [regex]::Matches($sourceContent, $functionDeclarationPattern)
+
+# Create dictionary to store documentation for each function
+$functionDocs = @{}
+
+foreach ($match in $functionMatches) {
+    $functionName = $match.Groups[1].Value
+    $functionPos = $match.Index
+    
+    # Get all content before this function
+    $contentBeforeFunction = $sourceContent.Substring(0, $functionPos)
+    
+    # Find the last comment block before this function
+    $lastCommentPattern = '/\*\*[\s\S]*?\*/'
+    $lastCommentMatches = [regex]::Matches($contentBeforeFunction, $lastCommentPattern)
+    
+    if ($lastCommentMatches.Count -gt 0) {
+        # Get only the last comment block
+        $lastComment = $lastCommentMatches[$lastCommentMatches.Count - 1].Value
+        
+        # Check if this comment is directly before the function (no other code between)
+        $commentEnd = $lastCommentMatches[$lastCommentMatches.Count - 1].Index + $lastCommentMatches[$lastCommentMatches.Count - 1].Length
+        $textBetween = $contentBeforeFunction.Substring($commentEnd).Trim()
+        
+        # If there's only whitespace, preprocessor directives, or nothing between the comment and function
+        if ($textBetween -match '^\s*(?:#.*?[\r\n]+\s*)*$') {
+            $functionDocs[$functionName] = $lastComment
+        }
+    }
+}
+
+# First, strip comments to avoid false positives when extracting function declarations
 $noComments = $sourceContent
 # Remove single-line comments
 $noComments = [regex]::Replace($noComments, "//.*?$", "", "Multiline")
@@ -97,7 +165,14 @@ foreach ($block in $staticBlocks) {
     }
     
     # Format the prototype, preserving pointer spacing as in original
-    $prototype = "static $returnType $functionName($parameters);"
+    $prototype = ""
+    
+    # Add doc comment if it exists for this function
+    if ($functionDocs.ContainsKey($functionName)) {
+        $prototype += "$($functionDocs[$functionName])`n"
+    }
+    
+    $prototype += "static $returnType $functionName($parameters);"
     $staticPrototypes += $prototype
 }
 
@@ -123,10 +198,35 @@ foreach ($block in $publicBlocks) {
     }
     
     # Format the prototype, preserving pointer spacing as in original
-    $prototype = "$returnType $functionName($parameters);"
+    $prototype = ""
+    
+    # Add doc comment if it exists for this function
+    if ($functionDocs.ContainsKey($functionName)) {
+        $prototype += "$($functionDocs[$functionName])`n"
+    }
+    
+    $prototype += "$returnType $functionName($parameters);"
     if (-not ($prototype -match 'static')) {
         $publicPrototypes += $prototype
     }
+}
+
+# Determine system headers based on whether base header exists
+$systemHeaders = @"
+// Include necessary system headers
+#include <tice.h>
+#include <ti/real.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+"@
+
+# Determine what to include in the public header
+$publicIncludes = if ($baseHeaderExists) {
+    "// Include base header file
+#include `"$baseHeaderFileName`""
+} else {
+    $systemHeaders
 }
 
 # Generate the public header file content
@@ -139,6 +239,7 @@ $publicHeaderContent = @"
  * Generated on: $(Get-Date)
  * Source file: $SourceFile
  * Contains public function prototypes: $($publicPrototypes.Count)
+ * Documentation comments from source are preserved
  */
 
 #ifndef $publicGuard
@@ -148,15 +249,10 @@ $publicHeaderContent = @"
 extern "C" {
 #endif
 
-// Include necessary system headers
-#include <tice.h>
-#include <ti/real.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
+$publicIncludes
 
 // Public Function Prototypes
-$($publicPrototypes -join "`n")
+$($publicPrototypes -join "`n`n")
 
 #ifdef __cplusplus
 }
@@ -175,6 +271,7 @@ $privateHeaderContent = @"
  * Generated on: $(Get-Date)
  * Source file: $SourceFile
  * Contains static function prototypes: $($staticPrototypes.Count)
+ * Documentation comments from source are preserved
  */
 
 #ifndef $privateGuard
@@ -184,7 +281,7 @@ $privateHeaderContent = @"
 #include "$(Split-Path $OutputFile -Leaf)"
 
 // Static Function Prototypes - only include this header in the corresponding .c file
-$($staticPrototypes -join "`n")
+$($staticPrototypes -join "`n`n")
 
 #endif // $privateGuard
 "@
@@ -196,18 +293,61 @@ try {
         New-Item -ItemType Directory -Path $headersDir -Force | Out-Null
     }
 
-    # Write public header
-    Set-Content -Path $OutputFile -Value $publicHeaderContent -ErrorAction Stop
+    # Check if there are any public or static functions
+    $hasPublic = $publicPrototypes.Count -gt 0
+    $hasStatic = $staticPrototypes.Count -gt 0
+
+    # Handle all possible combinations
+    if (-not $hasPublic -and -not $hasStatic) {
+        Write-Host "No functions found in the source file. No header files generated."
+        exit 0
+    }
     
-    # Only write private header if there are static functions to include
-    if ($staticPrototypes.Count -gt 0) {
-        Set-Content -Path $PrivateOutputFile -Value $privateHeaderContent -ErrorAction Stop
-        Write-Host "Header files generated successfully:"
-        Write-Host "  Public: $OutputFile ($($publicPrototypes.Count) prototypes)"
-        Write-Host "  Private: $PrivateOutputFile ($($staticPrototypes.Count) prototypes)"
+    # Generate public header if there are public functions
+    if ($hasPublic) {
+        Set-Content -Path $OutputFile -Value $publicHeaderContent -ErrorAction Stop
+        Write-Host "Public header generated: $OutputFile ($($publicPrototypes.Count) prototypes)"
+        if ($baseHeaderExists) {
+            Write-Host "  Base header found and referenced: $baseHeaderFile"
+        }
     } else {
-        Write-Host "No static functions found. Only public header generated:"
-        Write-Host "  Public: $OutputFile ($($publicPrototypes.Count) prototypes)"
+        Write-Host "No public functions found. Public header not generated."
+    }
+    
+    # Generate private header if there are static functions
+    if ($hasStatic) {
+        # If we have static functions but no public functions, we need to modify the private header
+        if (-not $hasPublic) {
+            # Create a modified private header that doesn't include the public header
+            $privateHeaderContent = @"
+
+/*
+ * This is an automatically generated private header file from the source file: $SourceFile
+ * Do not modify this file directly. Instead, modify the source file and regenerate this header.
+ * 
+ * Generated on: $(Get-Date)
+ * Source file: $SourceFile
+ * Contains static function prototypes: $($staticPrototypes.Count)
+ * Documentation comments from source are preserved
+ */
+
+#ifndef $privateGuard
+#define $privateGuard
+
+// Include system headers or base header
+$($baseHeaderExists ? "// Include base header file`n#include `"$baseHeaderFileName`"" : $systemHeaders)
+
+// Static Function Prototypes - only include this header in the corresponding .c file
+$($staticPrototypes -join "`n`n")
+
+#endif // $privateGuard
+"@
+        }
+        
+        Set-Content -Path $PrivateOutputFile -Value $privateHeaderContent -ErrorAction Stop
+        Write-Host "Private header generated: $PrivateOutputFile ($($staticPrototypes.Count) prototypes)"
+    } else {
+        Write-Host "No static functions found. Private header not generated."
     }
 } catch {
     Write-Error "Failed to create header files: $_"

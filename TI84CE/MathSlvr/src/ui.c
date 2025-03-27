@@ -68,7 +68,6 @@ static bool waiting = false;
  * Clears the screen and resets the cursor to the home position.
  */
 void clear_screen(void) {
-    os_FontSelect(os_SmallFont);
     os_ClrHome();
     os_SetCursorPos(0, 0);
 }
@@ -395,46 +394,6 @@ void show_calculation_result(CalculationResult* result) {
 }
 
 /**
- * Displays the result of a calculation, including steps if available.
- * 
- * @param result Pointer to the CalculationResult structure containing the result data.
- */
-static void old_show_calculation_result(CalculationResult* result) {
-    draw_header();
-    
-    // Show the expression and result
-    println_format_truncated("Expr : %s", current_expression);
-    println_format_truncated("Ans  : %s", result->formatted_result);
-    println_format_truncated("Mode : %s", get_mode_str());
-    println_format_truncated("Steps: %d", result->step_count);
-    
-    draw_horizontal_line();
-    os_SetCursorPos(7, 0);
-    
-    // Only proceed with steps if we have any
-    if (result->step_count > 1) {
-        // Ensure step_scroll_position is within bounds
-        if (step_scroll_position > result->step_count - 1) {
-            step_scroll_position = 0;
-        }
-        if (step_scroll_position < 0) {
-            step_scroll_position = result->step_count - 1;
-        }
-        
-        // Display the current step
-        if (step_scroll_position < result->step_count) {
-            println_format_truncated("%d. %s = %s", 
-                (step_scroll_position + 1), 
-                result->steps[step_scroll_position].expression, 
-                result->steps[step_scroll_position].result);
-        }
-    }
-    
-    // Navigation hints
-    print_footer("<ENT.>:Input <CLEAR>:exit");
-}
-
-/**
  * Displays an error message on the screen.
  * 
  * @param message The error message to display.
@@ -614,6 +573,7 @@ void settings_state(void) {
  * Exits the calculator UI.
  */
 void leave(void) {
+    waiting = false;
     running = false;
 }
 
@@ -812,7 +772,6 @@ static void update_precision(void) {
     if (key) {
         int num = key_to_number(key);
         if (num >= 0) {
-            kb_clear_last_key();
             set_precision(num);
             print_precision();
         }

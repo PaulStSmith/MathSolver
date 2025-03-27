@@ -3,6 +3,7 @@
 
 # Application name
 NAME = ASCIITBL
+DESCRIPTION = "ASCII Chart Viewer"
 
 # Object files
 OBJS = $(patsubst %.c,%.o,$(C_FILES))
