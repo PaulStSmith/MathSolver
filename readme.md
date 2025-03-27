@@ -24,7 +24,7 @@ A powerful C# library designed for parsing, evaluating, and displaying mathemati
 - Variable substitution
 - Mathematical constants (π, e, φ)
 
-[View MathSolver2 Documentation](./mathsolver2/README.md)
+[View MathSolver2 Documentation](./MathSolver2/readme.md)
 
 ### MathSolver for TI-84 CE
 
@@ -38,7 +38,7 @@ A calculator-optimized port of the MathSolver engine, providing enhanced mathema
 - Multiple calculation modes
 - Precision control
 
-[View MathSolver for TI-84 CE Documentation](./TI84CE/mathslvr/README.md)
+[View MathSolver for TI-84 CE Documentation](./TI84CE/mathslvr/readme.md)
 
 ### ASCII Chart Viewer
 
@@ -51,7 +51,7 @@ A simple utility program for browsing and identifying ASCII and extended ASCII c
 - Special handling for control characters
 - Simple navigation using calculator keys
 
-[View ASCII Chart Viewer Documentation](./TI84CE/ASCII_chart/README.md)
+[View ASCII Chart Viewer Documentation](./TI84CE/ASCII_chart/readme.md)
 
 ## Requirements
 
