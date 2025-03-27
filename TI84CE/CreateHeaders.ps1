@@ -17,34 +17,23 @@ param(
 # Determine the directory of the source file
 $sourceDir = [System.IO.Path]::GetDirectoryName($SourceFile)
 $headersDir = Join-Path $sourceDir "headers"
+$fileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($SourceFile)
 
 if (-not $OutputFile) {
-    $fileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($SourceFile)
     $OutputFile = Join-Path $headersDir "$($fileBaseName)_public.h"
 }
 
 if (-not $PrivateOutputFile) {
-    $fileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($SourceFile)
     $PrivateOutputFile = Join-Path $headersDir "$($fileBaseName)_private.h"
 }
 
 # Check if a base header file exists (myfile.h)
-$fileBaseName = [System.IO.Path]::GetFileNameWithoutExtension($SourceFile)
 $baseHeaderFile = Join-Path $headersDir "$($fileBaseName).h"
 $baseHeaderExists = Test-Path -Path $baseHeaderFile
 $baseHeaderFileName = "$($fileBaseName).h"
 
 # Read the source file
 $sourceContent = Get-Content -Path $SourceFile -Raw
-
-# Check if the output files exist and delete them
-if (Test-Path -Path $OutputFile) {
-    Remove-Item -Path $OutputFile -Force
-}
-
-if (Test-Path -Path $PrivateOutputFile) {
-    Remove-Item -Path $PrivateOutputFile -Force
-}
 
 # Extract the filename without extension for the include guard
 $publicGuard = [System.IO.Path]::GetFileNameWithoutExtension($OutputFile).ToUpper() + "_H"
@@ -74,7 +63,7 @@ if (-not $needsRegeneration -and (Test-Path -Path $PrivateOutputFile)) {
 
 # If source file hasn't been modified since the header files were last generated, we can skip
 if (-not $needsRegeneration) {
-    Write-Host "Header files are up to date. Skipping generation."
+    Write-Host "Header files for $($fileBaseName).c are up to date. Skipping generation."
     exit 0
 }
 
