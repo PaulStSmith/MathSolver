@@ -53,6 +53,11 @@ if (Test-Path -Path $OutputFile) {
     }
 }
 
+# Check if the private header file exists and if it needs to be regenerated
+if (-not (Test-Path -Path $PrivateOutputFile)) {
+    $needsRegeneration = $true
+}
+
 # Check private header timestamp if it exists
 if (-not $needsRegeneration -and (Test-Path -Path $PrivateOutputFile)) {
     $privateLastModified = (Get-Item -Path $PrivateOutputFile).LastWriteTime
@@ -60,6 +65,7 @@ if (-not $needsRegeneration -and (Test-Path -Path $PrivateOutputFile)) {
         $needsRegeneration = $true
     }
 }
+
 
 # If source file hasn't been modified since the header files were last generated, we can skip
 if (-not $needsRegeneration) {
@@ -303,12 +309,10 @@ try {
         Write-Host "No public functions found. Public header not generated."
     }
     
-    # Generate private header if there are static functions
-    if ($hasStatic) {
-        # If we have static functions but no public functions, we need to modify the private header
-        if (-not $hasPublic) {
-            # Create a modified private header that doesn't include the public header
-            $privateHeaderContent = @"
+    # Generate private header, but if we have no public functions, we need to modify the private header
+    if (-not $hasPublic) {
+        # Create a modified private header that doesn't include the public header
+        $privateHeaderContent = @"
 
 /*
  * This is an automatically generated private header file from the source file: $SourceFile
@@ -335,9 +339,6 @@ $($staticPrototypes -join "`n`n")
         
         Set-Content -Path $PrivateOutputFile -Value $privateHeaderContent -ErrorAction Stop
         Write-Host "Private header generated: $PrivateOutputFile ($($staticPrototypes.Count) prototypes)"
-    } else {
-        Write-Host "No static functions found. Private header not generated."
-    }
 } catch {
     Write-Error "Failed to create header files: $_"
     exit 1

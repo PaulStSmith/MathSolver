@@ -13,6 +13,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "headers/ui.h"
+#include "headers/gui.h"
 #include "headers/log.h"
 // #include "headers/main_private.h"
 #include "headers/kb_handler.h"
@@ -23,11 +24,6 @@
 #define TEXT_Y 40
 #define BUFFER_SIZE 50
 #define MAX_INPUT_LEN 30
-
-// Colors for the graphical interface
-#define BG_COLOR 0xFF
-#define TEXT_COLOR 0x00
-#define HIGHLIGHT_COLOR 0x10
 
 // Example input buffer implementation
 char input_buffer[MAX_INPUT_LEN + 1] = {0};

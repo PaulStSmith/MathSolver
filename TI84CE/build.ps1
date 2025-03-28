@@ -30,6 +30,12 @@ function Write-Line {
     Write-Host $line -ForegroundColor $Color
 }
 
+$makefileExist = Test-Path -Path .\makefile
+If (-not $makefileExist) {
+    Write-Host "Makefile not found in the current directory." -ForegroundColor Red
+    exit 1
+}
+
 $currDir = Get-Location
 $myPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 $createHeaders = Join-Path $myPath CreateHeaders.ps1
