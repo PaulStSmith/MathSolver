@@ -1,8 +1,12 @@
 #include <tice.h>
 #include <keypadc.h>
 #include <string.h>
+#include <stdio.h>
 #include "headers/kb_handler.h"
 #include "headers/kb_handler_private.h"
+
+#define LOG_TAG "kb_handler"
+#include "headers/log.h"
 
 /**
  * Structure representing a callback entry.
@@ -248,6 +252,9 @@ void kb_process(void) {
                     
                     // If this is a new key press, call the any-key callback
                     if (!was_any_pressed) {
+                        static char msg[32];
+                        snprintf(msg, sizeof(msg), "key pressed: %d", current_key);
+                        log_debug(msg);
                         callbacks[i].callback.any_press(current_key);
                     }
                 }

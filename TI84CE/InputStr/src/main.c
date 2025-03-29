@@ -1,235 +1,258 @@
-/**
- * MathSolver for TI-84 CE - Main Program
- * 
- * Main entry point for the calculator application.
- * This program initializes the math solver, sets up default variables,
- * configures arithmetic settings, and runs the calculator UI.
- */
-
 #include <tice.h>
 #include <graphx.h>
-#include <ti/screen.h>
-#include <keypadc.h>
 #include <string.h>
 #include <stdio.h>
-#include "headers/ui.h"
+#include "headers/gui_private.h"
 #include "headers/gui.h"
-#include "headers/log.h"
-// #include "headers/main_private.h"
 #include "headers/kb_handler.h"
-#include "headers/kb_mapping.h"
 
-// Size and position constants for text display
-#define TEXT_X 10
-#define TEXT_Y 40
-#define BUFFER_SIZE 50
-#define MAX_INPUT_LEN 30
+// Global variables
+HScrollTextField* active_field = NULL;
 
-// Example input buffer implementation
-char input_buffer[MAX_INPUT_LEN + 1] = {0};
-int cursor_position = 0;
-
-// Function prototypes for this example
-void draw_status(const char* status_text);
-void draw_input(void);
-void add_char_to_input(char c);
-void handle_special_key(int key_value);
+// Function prototypes
+void setup_keyboard_callbacks(void);
+void handle_left_press(void);
+void handle_right_press(void);
+void handle_del_press(void);
+void handle_number_press(void);
+void handle_add_press(void);
+void handle_sub_press(void);
+void handle_mul_press(void);
+void handle_div_press(void);
+void handle_lparen_press(void);
+void handle_rparen_press(void);
+void handle_sin_press(void);
+void handle_cos_press(void);
+void handle_tan_press(void);
+void handle_key_hold(int hold_time);
 
 int main(void) {
-    // Initialize graphics
-    gfx_Begin();
-    gfx_SetDrawBuffer();
-    gfx_FillScreen(BG_COLOR);
-    gfx_SetTextFGColor(TEXT_COLOR);
-    gfx_SetTextBGColor(BG_COLOR);
+    // Initialize the GUI system
+    GUI_init();
     
     // Initialize keyboard handler
     kb_init();
-    KeyboardState kb_state = key_mapping_init();
+    setup_keyboard_callbacks();
     
-    // Initial draw
-    gfx_PrintStringXY("TI-84 CE Input Example", TEXT_X, TEXT_Y - 20);
-    draw_status("Normal Mode");
-    draw_input();
-    gfx_BlitBuffer();
+    // Create and initialize a scrollable text field
+    HScrollTextField input_field;
+    GUI_hscroll_init(&input_field, 10, 50, LCD_WIDTH - 20, true);
+    input_field.is_active = true;
+    GUI_hscroll_set_text(&input_field, "sin(x) + 5");
+    
+    // Set as the active field (for keyboard input)
+    active_field = &input_field;
     
     // Main loop
     bool running = true;
+    
     while (running) {
         // Process keyboard events
         kb_process();
         
-        // Check for keys
-        if (kb_AnyKey()) {
-            // Find which key was pressed
-            CombinedKey pressed_key = kb_get_last_key();
-            
-            // Check if it's a mode key (Alpha or 2nd)
-            if (key_mapping_process_mode_keys(pressed_key, &kb_state)) {
-                // Update mode display
-                switch (kb_state.current_mode) {
-                    case KB_MODE_NORMAL:
-                        draw_status("Normal Mode");
-                        break;
-                    case KB_MODE_ALPHA:
-                        draw_status("Alpha Mode (Temporary)");
-                        break;
-                    case KB_MODE_2ND:
-                        draw_status("2nd Mode");
-                        break;
-                    case KB_MODE_ALPHA_LOCK:
-                        draw_status("Alpha Lock Mode (A-Lock)");
-                        break;
-                }
+        // Check if user pressed clear to exit
+        if (kb_is_key_pressed(MAKE_KEY(6, kb_Clear))) {
+            if (input_field.text_length > 0) {
+                GUI_hscroll_clear(&input_field);
             } else {
-                // Get the value for the current key in the current mode
-                int key_value = key_mapping_get_value(pressed_key, kb_state);
-                
-                // Debug: show key value
-                char key_str[16];
-                key_mapping_value_to_string(key_value, key_str);
-                gfx_PrintStringXY("Key: ", TEXT_X, TEXT_Y + 60);
-                gfx_PrintStringXY(key_str, TEXT_X + 40, TEXT_Y + 60);
-                
-                // Handle the key based on its value
-                if (key_value >= 32 && key_value < 128) {
-                    // Regular character
-                    add_char_to_input((char)key_value);
-                } else {
-                    // Special key (function, control, etc.)
-                    handle_special_key(key_value);
-                }
-                
-                // Check for exit condition (Clear key)
-                if (key_value == KB_KEY_CLEAR && input_buffer[0] == '\0') {
-                    // Exit the program if Clear is pressed and input is empty
-                    running = false;
-                }
+                // Exit if the field is empty
+                running = false;
+                continue;
             }
-            
-            // Redraw the input
-            draw_input();
-            gfx_BlitBuffer();
-            
-            // Wait for key release to avoid repeats
-            debounce();
         }
         
-        // Small delay to reduce CPU usage
-        delay(10);
+        // Clear the screen
+        gfx_FillScreen(BG_COLOR);
+        
+        // Draw a title
+        GUI_write_text_centered(10, "Math Expression Editor");
+        
+        // Draw instructions
+        GUI_write_text(10, 30, "Use arrow keys to move cursor");
+        
+        // Draw the scrollable text field
+        GUI_hscroll_draw(&input_field);
+        
+        // Display current expression length
+        char length_info[32];
+        sprintf(length_info, "Length: %d chars", input_field.text_length);
+        GUI_write_text(10, 80, length_info);
+        
+        // Preview section
+        GUI_write_text(10, 110, "Expression:");
+        GUI_print_text(10, 130, input_field.text);
+        
+        // Render all changes to the screen
+        gfx_BlitBuffer();
+        
+        // Small delay
+        delay(50);
     }
     
-    // Cleanup
-    gfx_End();
+    // Clean up
+    kb_clear(); // Clear all keyboard callbacks
+    GUI_hscroll_free(&input_field);
+    GUI_end();
+    
     return 0;
 }
 
-/**
- * Draws the current status text at the top of the screen
- */
-void draw_status(const char* status_text) {
-    // Clear status area
-    gfx_SetColor(BG_COLOR);
-    gfx_FillRectangle(0, 0, 320, 20);
+// Set up keyboard callbacks
+void setup_keyboard_callbacks(void) {
+    // Arrow keys for cursor movement
+    kb_register_press(MAKE_KEY(7, kb_Left), handle_left_press);
+    kb_register_press(MAKE_KEY(7, kb_Right), handle_right_press);
     
-    // Draw status text
-    gfx_SetTextXY(TEXT_X, 5);
-    gfx_PrintString(status_text);
+    // Register hold callbacks for repeat movement
+    kb_register_hold(MAKE_KEY(7, kb_Left), handle_key_hold, 300, true, 100);
+    kb_register_hold(MAKE_KEY(7, kb_Right), handle_key_hold, 300, true, 100);
+    
+    // Delete key
+    kb_register_press(MAKE_KEY(1, kb_Del), handle_del_press);
+    
+    // Number keys (just register one for demo)
+    kb_register_press(MAKE_KEY(3, kb_1), handle_number_press);
+    kb_register_press(MAKE_KEY(4, kb_2), handle_number_press);
+    kb_register_press(MAKE_KEY(5, kb_3), handle_number_press);
+    kb_register_press(MAKE_KEY(3, kb_4), handle_number_press);
+    kb_register_press(MAKE_KEY(4, kb_5), handle_number_press);
+    kb_register_press(MAKE_KEY(5, kb_6), handle_number_press);
+    kb_register_press(MAKE_KEY(3, kb_7), handle_number_press);
+    kb_register_press(MAKE_KEY(4, kb_8), handle_number_press);
+    kb_register_press(MAKE_KEY(5, kb_9), handle_number_press);
+    kb_register_press(MAKE_KEY(3, kb_0), handle_number_press);
+    
+    // Basic operators
+    kb_register_press(MAKE_KEY(6, kb_Add), handle_add_press);
+    kb_register_press(MAKE_KEY(6, kb_Sub), handle_sub_press);
+    kb_register_press(MAKE_KEY(6, kb_Mul), handle_mul_press);
+    kb_register_press(MAKE_KEY(6, kb_Div), handle_div_press);
+    
+    // Parentheses
+    kb_register_press(MAKE_KEY(4, kb_LParen), handle_lparen_press);
+    kb_register_press(MAKE_KEY(5, kb_RParen), handle_rparen_press);
+    
+    // Functions
+    kb_register_press(MAKE_KEY(3, kb_Sin), handle_sin_press);
+    kb_register_press(MAKE_KEY(4, kb_Cos), handle_cos_press);
+    kb_register_press(MAKE_KEY(5, kb_Tan), handle_tan_press);
 }
 
-/**
- * Draws the current input buffer with cursor
- */
-void draw_input(void) {
-    // Clear input area
-    gfx_SetColor(BG_COLOR);
-    gfx_FillRectangle(0, TEXT_Y, 320, 30);
-    
-    // Draw input box
-    gfx_SetColor(TEXT_COLOR);
-    gfx_Rectangle(TEXT_X, TEXT_Y, 300, 20);
-    
-    // Draw input text and cursor
-    gfx_PrintStringXY(input_buffer, TEXT_X + 5, TEXT_Y + 5);
-    
-    // Draw cursor position
-    char draw_str[cursor_position + 1];
-    snprintf(draw_str, sizeof(draw_str), "%s", input_buffer);
-    int cursor_x = 4 + TEXT_X + gfx_GetStringWidth(draw_str);
-    gfx_SetColor(HIGHLIGHT_COLOR);
-    gfx_Line(cursor_x, TEXT_Y + 3, cursor_x, TEXT_Y + 15);
-}
-
-/**
- * Adds a character to the input buffer at current cursor position
- */
-void add_char_to_input(char c) {
-    // Check if we have room
-    if (strlen(input_buffer) < MAX_INPUT_LEN) {
-        // Make room for the new character
-        memmove(input_buffer + cursor_position + 1, 
-                input_buffer + cursor_position,
-                strlen(input_buffer) - cursor_position + 1);
-        
-        // Insert the character
-        input_buffer[cursor_position] = c;
-        
-        // Advance cursor
-        cursor_position++;
+// Handle left arrow press
+void handle_left_press(void) {
+    if (active_field) {
+        GUI_hscroll_cursor_left(active_field);
     }
 }
 
-/**
- * Handle special keys like backspace, arrows, etc.
- */
-void handle_special_key(int key_value) {
-    switch (key_value) {
-        case KB_KEY_LEFT:
-            // Move cursor left
-            if (cursor_position > 0) {
-                cursor_position--;
-            }
-            break;
-            
-        case KB_KEY_RIGHT:
-            // Move cursor right
-            if (cursor_position < (int)strlen(input_buffer)) {
-                cursor_position++;
-            }
-            break;
-            
-        case KB_KEY_DEL:
-            // Delete character at cursor
-            if (cursor_position < (int)strlen(input_buffer)) {
-                memmove(input_buffer + cursor_position,
-                        input_buffer + cursor_position + 1,
-                        strlen(input_buffer) - cursor_position);
-            }
-            break;
-            
-        case KB_KEY_CLEAR:
-            // Clear entire input
-            input_buffer[0] = '\0';
-            cursor_position = 0;
-            break;
-            
-        case KB_KEY_ENTER:
-            // Process the input (for demonstration, just clear)
-            gfx_PrintStringXY("Input: ", TEXT_X, TEXT_Y + 30);
-            gfx_PrintString(input_buffer);
-            
-            // Clear the input after processing
-            input_buffer[0] = '\0';
-            cursor_position = 0;
-            break;
-            
-        default: {
-            // For function keys, just show what was pressed
-            char func_name[16];
-            key_mapping_value_to_string(key_value, func_name);
-            gfx_PrintStringXY("Func: ", TEXT_X, TEXT_Y + 80);
-            gfx_PrintStringXY(func_name, TEXT_X + 40, TEXT_Y + 80);
-            break;
-        }
+// Handle right arrow press
+void handle_right_press(void) {
+    if (active_field) {
+        GUI_hscroll_cursor_right(active_field);
+    }
+}
+
+// Handle delete key press
+void handle_del_press(void) {
+    if (active_field) {
+        GUI_hscroll_delete_char(active_field);
+    }
+}
+
+// Handle number key press - determine which number was pressed
+void handle_number_press(void) {
+    if (!active_field) return;
+    
+    CombinedKey key = kb_get_last_key();
+    char digit = '0';
+    
+    // Determine which digit was pressed based on the key
+    if (key == MAKE_KEY(3, kb_0)) digit = '0';
+    else if (key == MAKE_KEY(3, kb_1)) digit = '1';
+    else if (key == MAKE_KEY(4, kb_2)) digit = '2';
+    else if (key == MAKE_KEY(5, kb_3)) digit = '3';
+    else if (key == MAKE_KEY(3, kb_4)) digit = '4';
+    else if (key == MAKE_KEY(4, kb_5)) digit = '5';
+    else if (key == MAKE_KEY(5, kb_6)) digit = '6';
+    else if (key == MAKE_KEY(3, kb_7)) digit = '7';
+    else if (key == MAKE_KEY(4, kb_8)) digit = '8';
+    else if (key == MAKE_KEY(5, kb_9)) digit = '9';
+    
+    GUI_hscroll_insert_char(active_field, digit);
+}
+
+// Handle addition key
+void handle_add_press(void) {
+    if (active_field) {
+        GUI_hscroll_insert_char(active_field, '+');
+    }
+}
+
+// Handle subtraction key
+void handle_sub_press(void) {
+    if (active_field) {
+        GUI_hscroll_insert_char(active_field, '-');
+    }
+}
+
+// Handle multiplication key
+void handle_mul_press(void) {
+    if (active_field) {
+        GUI_hscroll_insert_char(active_field, '*');
+    }
+}
+
+// Handle division key
+void handle_div_press(void) {
+    if (active_field) {
+        GUI_hscroll_insert_char(active_field, '/');
+    }
+}
+
+// Handle left parenthesis
+void handle_lparen_press(void) {
+    if (active_field) {
+        GUI_hscroll_insert_char(active_field, '(');
+    }
+}
+
+// Handle right parenthesis
+void handle_rparen_press(void) {
+    if (active_field) {
+        GUI_hscroll_insert_char(active_field, ')');
+    }
+}
+
+// Handle sine function
+void handle_sin_press(void) {
+    if (active_field) {
+        GUI_hscroll_append(active_field, "sin(");
+    }
+}
+
+// Handle cosine function
+void handle_cos_press(void) {
+    if (active_field) {
+        GUI_hscroll_append(active_field, "cos(");
+    }
+}
+
+// Handle tangent function
+void handle_tan_press(void) {
+    if (active_field) {
+        GUI_hscroll_append(active_field, "tan(");
+    }
+}
+
+// Handle key hold (for repeating movements)
+void handle_key_hold(int hold_time) {
+    if (!active_field) return;
+    
+    CombinedKey key = kb_get_last_key();
+    
+    if (key == MAKE_KEY(7, kb_Left)) {
+        GUI_hscroll_cursor_left(active_field);
+    } else if (key == MAKE_KEY(7, kb_Right)) {
+        GUI_hscroll_cursor_right(active_field);
     }
 }

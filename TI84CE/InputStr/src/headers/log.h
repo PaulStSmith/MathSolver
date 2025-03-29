@@ -15,4 +15,8 @@
 #include <ti/real.h>
 #include "log_public.h"
 
+#ifndef LOG_TAG
+#define LOG_TAG ""
+#endif
+
 #endif // LOG_H

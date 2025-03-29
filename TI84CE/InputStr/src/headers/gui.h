@@ -30,12 +30,31 @@
 
 #define GUI_CHAR_WIDTH     8           // Width of a character in pixels
 #define GUI_CHAR_HEIGHT    8           // Height of a character in pixels
+#define GUI_LINE_HEIGHT    9           // Height of a line in pixels
+#define GUI_MAX_CHARS_PER_LINE ((LCD_WIDTH - PADDING_X) / GUI_CHAR_WIDTH) // Max chars per line
+#define GUI_MAX_LINES      ((LCD_HEIGHT - PADDING_Y) / GUI_LINE_HEIGHT) // Max lines on screen
 
 typedef struct {
     int bg_color;         // Background color
     int text_color;       // Text color
     int highlight_color;  // Highlight color
 } GUISettings;
+
+/**
+ * @brief Structure for a horizontally scrollable text field.
+ */
+typedef struct {
+    char* text;             // Text content
+    int text_length;        // Length of the text
+    int buffer_size;        // Total buffer size allocated
+    int cursor_position;    // Cursor position in the text (character index)
+    int scroll_offset;      // Horizontal scroll offset (character index)
+    int x, y;               // Position on screen
+    int width;              // Width of the visible text field in pixels
+    int max_visible_chars;  // Maximum number of visible characters
+    bool has_border;        // Whether to draw a border
+    bool is_active;         // Whether this field is currently active/focused
+} HScrollTextField;
 
 #include "gui_public.h"
 
