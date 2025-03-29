@@ -60,7 +60,7 @@ int main(void) {
                 continue;
             }
         }
-        
+
         // Clear the screen
         gfx_FillScreen(BG_COLOR);
         
@@ -155,7 +155,13 @@ void handle_right_press(void) {
 // Handle delete key press
 void handle_del_press(void) {
     if (active_field) {
-        GUI_hscroll_delete_char(active_field);
+        // If cursor is at the end, act like backspace
+        if (active_field->cursor_position == active_field->text_length) {
+            GUI_hscroll_backspace_char(active_field);
+        } else {
+            // Otherwise delete the character at cursor position
+            GUI_hscroll_delete_char(active_field);
+        }
     }
 }
 

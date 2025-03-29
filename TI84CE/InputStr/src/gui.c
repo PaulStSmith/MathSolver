@@ -278,7 +278,7 @@ static void _GUI_print_text_internal(int x, int y, const char* text, int max_wid
  * @param has_border Whether to draw a border
  */
 void GUI_hscroll_init(HScrollTextField* field, int x, int y, int width, bool has_border) {
-    // log_debuglog_debug("GUI_hscroll_init() called");
+    log_debug("GUI_hscroll_init() called");
     
     memset(field, 0, sizeof(HScrollTextField));
     field->x = x;
@@ -311,7 +311,7 @@ void GUI_hscroll_init(HScrollTextField* field, int x, int y, int width, bool has
  * @param field Pointer to HScrollTextField structure
  */
 void GUI_hscroll_free(HScrollTextField* field) {
-    // log_debuglog_debug("GUI_hscroll_free() called");
+    log_debug("GUI_hscroll_free() called");
     
     if (field->text) {
         free(field->text);
@@ -360,7 +360,7 @@ static bool ensure_buffer_size(HScrollTextField* field, int needed_size) {
  * @param text Text to set
  */
 void GUI_hscroll_set_text(HScrollTextField* field, const char* text) {
-    // log_debuglog_debug("GUI_hscroll_set_text() called");
+    log_debug("GUI_hscroll_set_text() called");
     
     int length = strlen(text);
     if (ensure_buffer_size(field, length + 1)) {
@@ -374,15 +374,15 @@ void GUI_hscroll_set_text(HScrollTextField* field, const char* text) {
 }
 
 /**
- * @brief Clear the text content of the field.
+ * @brief Clear all text from the field.
  * 
  * @param field Pointer to HScrollTextField structure
  */
 void GUI_hscroll_clear(HScrollTextField* field) {
-    // log_debuglog_debug("GUI_hscroll_clear() called");
+    log_debug("GUI_hscroll_clear() called");
     
     if (field->text) {
-        field->text[0] = '\0';  // Clear text
+        field->text[0] = '\0';
         field->text_length = 0;
         field->cursor_position = 0;
         field->scroll_offset = 0;
@@ -396,7 +396,7 @@ void GUI_hscroll_clear(HScrollTextField* field) {
  * @param text Text to append
  */
 void GUI_hscroll_append(HScrollTextField* field, const char* text) {
-    // log_debuglog_debug("GUI_hscroll_append() called");
+    log_debug("GUI_hscroll_append() called");
     
     int append_length = strlen(text);
     int new_length = field->text_length + append_length;
@@ -418,7 +418,7 @@ void GUI_hscroll_append(HScrollTextField* field, const char* text) {
  * @param c Character to insert
  */
 void GUI_hscroll_insert_char(HScrollTextField* field, char c) {
-    // log_debuglog_debug("GUI_hscroll_insert_char() called");
+    log_debug("GUI_hscroll_insert_char() called");
     
     if (ensure_buffer_size(field, field->text_length + 2)) {
         // Shift characters after cursor
@@ -440,8 +440,8 @@ void GUI_hscroll_insert_char(HScrollTextField* field, char c) {
  * 
  * @param field Pointer to HScrollTextField structure
  */
-void GUI_hscroll_delete_char(HScrollTextField* field) {
-    // log_debuglog_debug("GUI_hscroll_delete_char() called");
+void GUI_hscroll_backspace_char(HScrollTextField* field) {
+    log_debug("GUI_hscroll_backspace_char() called");
     
     if (field->cursor_position > 0) {
         // Shift characters at and after cursor
@@ -452,6 +452,28 @@ void GUI_hscroll_delete_char(HScrollTextField* field) {
         field->text_length--;
         field->cursor_position--;
         
+        GUI_hscroll_ensure_cursor_visible(field);
+    }
+}
+
+/**
+ * @brief Delete the character at the cursor position.
+ * 
+ * @param field Pointer to HScrollTextField structure
+ */
+void GUI_hscroll_delete_char(HScrollTextField* field) {
+    log_debug("GUI_hscroll_delete_char() called");
+    
+    // Only proceed if we're not at the end of the text
+    if (field->cursor_position < field->text_length) {
+        // Shift characters after cursor
+        for (int i = field->cursor_position; i < field->text_length; i++) {
+            field->text[i] = field->text[i + 1];
+        }
+        
+        field->text_length--;
+        
+        // Cursor position stays the same
         GUI_hscroll_ensure_cursor_visible(field);
     }
 }
@@ -552,7 +574,7 @@ void GUI_hscroll_ensure_cursor_visible(HScrollTextField* field) {
  * @param field Pointer to HScrollTextField structure
  */
 void GUI_hscroll_draw(HScrollTextField* field) {
-    // log_debuglog_debug("GUI_hscroll_draw() called");
+    log_debug("GUI_hscroll_draw() called");
     GUISettings* settings = GUI_get_settings();
     
     // Draw background and border
@@ -589,10 +611,8 @@ void GUI_hscroll_draw(HScrollTextField* field) {
     }
     visible_text[visible_length] = '\0';
     
-    // Draw the visible text
-    gfx_SetTextFGColor(settings->text_color);
-    gfx_SetTextBGColor(settings->bg_color);
-    gfx_PrintStringXY(visible_text, content_x, content_y);
+    // Draw the visible text using our custom function
+    GUI_write_text(content_x, content_y, visible_text);
     
     // Draw cursor if active
     if (field->is_active) {
@@ -603,14 +623,22 @@ void GUI_hscroll_draw(HScrollTextField* field) {
     
     // Draw scroll indicators if needed
     if (field->scroll_offset > 0) {
-        // Left scroll indicator (e.g., a small triangle or '<')
-        gfx_SetTextFGColor(settings->text_color);
-        gfx_PrintStringXY("<", field->x, content_y);
+        // Left scroll indicator as a small triangle
+        gfx_SetColor(settings->text_color);
+        int tri_x = field->x + 3;
+        int tri_y = content_y + GUI_CHAR_HEIGHT/2;
+        gfx_Line(tri_x + 4, tri_y - 3, tri_x, tri_y); // Top line of triangle
+        gfx_Line(tri_x, tri_y, tri_x + 4, tri_y + 3); // Bottom line of triangle
+        gfx_Line(tri_x + 4, tri_y - 3, tri_x + 4, tri_y + 3); // Vertical line to close triangle
     }
     
     if (field->scroll_offset + field->max_visible_chars < field->text_length) {
-        // Right scroll indicator
-        gfx_SetTextFGColor(settings->text_color);
-        gfx_PrintStringXY(">", field->x + field->width - 8, content_y);
+        // Right scroll indicator as a small triangle
+        gfx_SetColor(settings->text_color);
+        int tri_x = field->x + field->width - 8;
+        int tri_y = content_y + GUI_CHAR_HEIGHT/2;
+        gfx_Line(tri_x, tri_y - 3, tri_x + 4, tri_y); // Top line of triangle
+        gfx_Line(tri_x + 4, tri_y, tri_x, tri_y + 3); // Bottom line of triangle
+        gfx_Line(tri_x, tri_y - 3, tri_x, tri_y + 3); // Vertical line to close triangle
     }
 }
