@@ -15,6 +15,9 @@
 #include "headers/mathsolver.h"
 #include "headers/ui_private.h"
 
+#define LOG_TAG "ui"
+#include "headers/log.h"
+
 /* ============================== State Variables ============================== */
 
 /**
@@ -614,6 +617,10 @@ void run_calculator_ui(void) {
                     if (get_expression_input(current_expression, MAX_INPUT_LENGTH)) {
                         // User entered an expression
                         if (strlen(current_expression) > 0) {
+                            int len = strlen(current_expression);
+                            for (int i = 0; i < len; i++) {
+                                log_message("Char %d: '%c'  %2x", i, current_expression[i], current_expression[i]);
+                            }
                             // Set flag to prevent redisplaying input prompt
                             input_processed = true;
                             

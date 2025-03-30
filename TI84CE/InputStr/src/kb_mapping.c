@@ -71,6 +71,7 @@ int key_mapping_get_value(CombinedKey key, KeyboardState state) {
     int mask      = KEY_MASK(key);
     bool is_alpha = state.alpha_active;
     bool is_2nd   = state.second_active;
+    bool is_alpha_lock_lower = (state.current_mode == KB_MODE_ALPHA_LOCK_LOWER);
 
     // Handle normal mode (no alpha, no 2nd)
     if (!is_alpha && !is_2nd) {
@@ -145,68 +146,135 @@ int key_mapping_get_value(CombinedKey key, KeyboardState state) {
             if (mask == kb_Up)       return KB_KEY_UP;
         }
     }
-    // Handle alpha mode
+    // Handle alpha modes (both regular and lock)
     else if (is_alpha && !is_2nd) {
-        // This maps the green letters on the calculator
-        // Group 3: Space, A, D, G
-        if (group == 3) {
+        // Per the Keyboard Modes.md file
+        if (group == 2) {
+            if (mask == kb_Math)     return is_alpha_lock_lower ? 'a' : 'A';
+            if (mask == kb_Recip)    return is_alpha_lock_lower ? 'd' : 'D';
+            if (mask == kb_Square)   return is_alpha_lock_lower ? 'i' : 'I';
+            if (mask == kb_Log)      return is_alpha_lock_lower ? 'n' : 'N';
+            if (mask == kb_Ln)       return is_alpha_lock_lower ? 's' : 'S';
+            if (mask == kb_Sto)      return is_alpha_lock_lower ? 'x' : 'X';
+        }
+        else if (group == 3) {
+            if (mask == kb_Apps)     return is_alpha_lock_lower ? 'b' : 'B';
+            if (mask == kb_Sin)      return is_alpha_lock_lower ? 'e' : 'E';
+            if (mask == kb_7)        return is_alpha_lock_lower ? 'o' : 'O';
+            if (mask == kb_4)        return is_alpha_lock_lower ? 't' : 'T';
+            if (mask == kb_1)        return is_alpha_lock_lower ? 'y' : 'Y';
             if (mask == kb_0)        return ' '; // Space
-            if (mask == kb_1)        return 'A';
-            if (mask == kb_4)        return 'D';
-            if (mask == kb_7)        return 'G';
-            if (mask == kb_Comma)    return '"'; // Quote
-            if (mask == kb_Sin)      return 'X';
-            if (mask == kb_Apps)     return 'O';
-            if (mask == kb_GraphVar) return 'T';
+            if (mask == kb_Comma)    return is_alpha_lock_lower ? 'j' : 'J';
         }
-        // Group 4: Period, B, E, H
         else if (group == 4) {
-            if (mask == kb_DecPnt)  return ':'; // Colon
-            if (mask == kb_2)       return 'B';
-            if (mask == kb_5)       return 'E';
-            if (mask == kb_8)       return 'H';
-            if (mask == kb_LParen)  return '[';
-            if (mask == kb_Cos)     return 'Y';
-            if (mask == kb_Prgm)    return 'P';
-            if (mask == kb_Stat)    return 'Z';
+            if (mask == kb_Prgm)     return is_alpha_lock_lower ? 'c' : 'C';
+            if (mask == kb_Cos)      return is_alpha_lock_lower ? 'f' : 'F';
+            if (mask == kb_8)        return is_alpha_lock_lower ? 'p' : 'P';
+            if (mask == kb_5)        return is_alpha_lock_lower ? 'u' : 'U';
+            if (mask == kb_2)        return is_alpha_lock_lower ? 'z' : 'Z';
+            if (mask == kb_DecPnt)   return ':';
+            if (mask == kb_LParen)   return is_alpha_lock_lower ? 'k' : 'K';
         }
-        // Group 5: ?, C, F, I
         else if (group == 5) {
-            if (mask == kb_Chs)     return '?';
-            if (mask == kb_3)       return 'C';
-            if (mask == kb_6)       return 'F';
-            if (mask == kb_9)       return 'I';
-            if (mask == kb_RParen)  return ']';
-            if (mask == kb_Tan)     return 'U';
-            if (mask == kb_Vars)    return 'Q';
+            if (mask == kb_Tan)      return is_alpha_lock_lower ? 'g' : 'G';
+            if (mask == kb_6)        return is_alpha_lock_lower ? 'v' : 'V';
+            if (mask == kb_3)        return '\x5b'; // No lowercase for special chars
+            if (mask == kb_Chs)      return '?';
+            if (mask == kb_9)        return is_alpha_lock_lower ? 'q' : 'Q';
+            if (mask == kb_RParen)   return is_alpha_lock_lower ? 'l' : 'L';
         }
-        // Group 2: Strings and other characters
+        else if (group == 6) {
+            if (mask == kb_Power)    return is_alpha_lock_lower ? 'h' : 'H';
+            if (mask == kb_Div)      return is_alpha_lock_lower ? 'm' : 'M';
+            if (mask == kb_Mul)      return is_alpha_lock_lower ? 'r' : 'R';
+            if (mask == kb_Sub)      return is_alpha_lock_lower ? 'w' : 'W';
+            if (mask == kb_Add)      return '"';
+            // Keep other keys the same
+            if (mask == kb_Enter)    return KB_KEY_ENTER;
+            if (mask == kb_Clear)    return KB_KEY_CLEAR;
+        }
+        // Arrow keys (Group 7) - keep the same in all modes
+        else if (group == 7) {
+            if (mask == kb_Down)     return KB_KEY_DOWN;
+            if (mask == kb_Left)     return KB_KEY_LEFT;
+            if (mask == kb_Right)    return KB_KEY_RIGHT;
+            if (mask == kb_Up)       return KB_KEY_UP;
+        }
+    }
+    // Handle 2nd mode
+    else if (!is_alpha && is_2nd) {
+        // Per the Keyboard Modes.md file
+        if (group == 2) {
+            if (mask == kb_Recip)    return FUNC_X_INV;     // ^-1
+            if (mask == kb_Square)   return FUNC_ROOT;      // sqrt(
+            if (mask == kb_Log)      return FUNC_10_X;      // 10^
+            if (mask == kb_Ln)       return FUNC_EXP;       // e^x
+        }
+        else if (group == 3) {
+            if (mask == kb_Sin)      return FUNC_SIN_INV;   // asin(
+            if (mask == kb_7)        return 'u';
+            if (mask == kb_1)        return 0;              // Empty or special value?
+        }
+        else if (group == 4) {
+            if (mask == kb_Cos)      return FUNC_COS_INV;   // acos(
+            if (mask == kb_8)        return 'v';
+            if (mask == kb_2)        return 0;              // Empty or special value?
+            if (mask == kb_LParen)   return '{';
+            if (mask == kb_DecPnt)   return 0xD7;           // Mathematical constant i
+        }
+        else if (group == 5) {
+            if (mask == kb_Tan)      return FUNC_TAN_INV;   // atan(
+            if (mask == kb_9)        return 'w';
+            if (mask == kb_RParen)   return '}';
+        }
+        else if (group == 6) {
+            if (mask == kb_Power)    return 0xC4;           // Mathematical constant pi
+            if (mask == kb_Div)      return 0xDB;           // Constant e
+            if (mask == kb_Mul)      return 0x5B;           // '[' on TI84
+            if (mask == kb_Sub)      return ']';
+        }
+        
+        // Standard 2nd key mappings (from your original code)
+        // Group 1: F1-F5 functions and catalog
+        if (group == 1) {
+            if (mask == kb_Graph)   return FUNC_TABLE;    // F5
+            if (mask == kb_Trace)   return FUNC_CALC;     // F4
+            if (mask == kb_Zoom)    return FUNC_FORMAT;   // F3
+            if (mask == kb_Window)  return FUNC_TBLSET;   // F2
+            if (mask == kb_Yequ)    return FUNC_STATPLOT; // F1
+            if (mask == kb_Mode)    return FUNC_QUIT;
+            if (mask == kb_Del)     return FUNC_INS;
+        }
+        // Group 2 (additional mappings)
         else if (group == 2) {
-            if (mask == kb_Sto)     return '~';
-            if (mask == kb_Ln)      return 'J';
-            if (mask == kb_Log)     return 'K';
-            if (mask == kb_Square)  return 'L';
-            if (mask == kb_Recip)   return 'M';
-            if (mask == kb_Math)    return 'N';
+            if (mask == kb_Sto)     return FUNC_RECALL;
+            if (mask == kb_Math)    return FUNC_TEST;
         }
-        // Group 1: More strings
-        else if (group == 1) {
-            if (mask == kb_Graph)   return '`'; // Grave accent
-            if (mask == kb_Trace)   return '=';
-            if (mask == kb_Zoom)    return '\\';
-            if (mask == kb_Window)  return '_'; // Underscore
-            if (mask == kb_Yequ)    return '<';
-            if (mask == kb_Del)     return '>';
+        // Group 3 (additional mappings)
+        else if (group == 3) {
+            if (mask == kb_0)       return FUNC_CATALOG;
+            if (mask == kb_Apps)    return FUNC_MATRIX;
+            if (mask == kb_GraphVar) return FUNC_DRAW;
+            if (mask == kb_4)       return FUNC_ANGLE;
         }
-        // Group 6: Standard operations
+        // Group 4 (additional mappings)
+        else if (group == 4) {
+            if (mask == kb_Prgm)    return FUNC_LIST;
+            if (mask == kb_Stat)    return FUNC_PROBABILITY;
+            if (mask == kb_5)       return FUNC_MEM;
+        }
+        // Group 5 (additional mappings)
+        else if (group == 5) {
+            if (mask == kb_Chs)     return FUNC_ENTRY;
+            if (mask == kb_Vars)    return FUNC_STRING;
+            if (mask == kb_3)       return FUNC_SOLVE;
+            if (mask == kb_6)       return FUNC_PARAMETRIC;
+        }
+        // Group 6 (additional mappings)
         else if (group == 6) {
             if (mask == kb_Enter)   return KB_KEY_ENTER;
-            if (mask == kb_Add)     return '+';
-            if (mask == kb_Sub)     return '-';
-            if (mask == kb_Mul)     return '*';
-            if (mask == kb_Div)     return '/';
-            if (mask == kb_Power)   return '^';
-            if (mask == kb_Clear)   return KB_KEY_CLEAR;
+            if (mask == kb_Add)     return FUNC_MEM_ADD;
+            if (mask == kb_Clear)   return FUNC_RESET;
         }
         // Group 7: Arrow keys - keep the same
         else if (group == 7) {
@@ -214,71 +282,6 @@ int key_mapping_get_value(CombinedKey key, KeyboardState state) {
             if (mask == kb_Left)    return KB_KEY_LEFT;
             if (mask == kb_Right)   return KB_KEY_RIGHT;
             if (mask == kb_Up)      return KB_KEY_UP;
-        }
-    }
-    // Handle 2nd mode
-    else if (!is_alpha && is_2nd) {
-        // This maps to the blue functions on the calculator
-        // Group 1: F1-F5 functions and catalog
-        if (group == 1) {
-            if (mask == kb_Graph)   return FUNC_TABLE;    // F5
-            if (mask == kb_Trace)   return FUNC_CALC;     // F4
-            if (mask == kb_Zoom)    return FUNC_FORMAT;   // F3
-            if (mask == kb_Window)  return FUNC_TBLSET;  // F2
-            if (mask == kb_Yequ)    return FUNC_STATPLOT; // F1
-            if (mask == kb_Mode)    return FUNC_QUIT;
-            if (mask == kb_Del)     return FUNC_INS;
-        }
-        // Group 2: Other 2nd functions
-        else if (group == 2) {
-            if (mask == kb_Sto)     return FUNC_RECALL;
-            if (mask == kb_Ln)      return FUNC_EXP;
-            if (mask == kb_Log)     return FUNC_10_X;
-            if (mask == kb_Square)  return FUNC_X_SQUARED;
-            if (mask == kb_Recip)   return FUNC_X_INV;
-            if (mask == kb_Math)    return FUNC_TEST;
-        }
-        // Group 3: More 2nd functions
-        else if (group == 3) {
-            if (mask == kb_0)       return FUNC_CATALOG;
-            if (mask == kb_1)       return FUNC_LINK;
-            if (mask == kb_4)       return FUNC_ANGLE;
-            if (mask == kb_7)       return FUNC_CALC_MENU;
-            if (mask == kb_Comma)   return '{';
-            if (mask == kb_Sin)     return FUNC_SIN_INV;
-            if (mask == kb_Apps)    return FUNC_MATRIX;
-            if (mask == kb_GraphVar) return FUNC_DRAW;
-        }
-        // Group 4
-        else if (group == 4) {
-            if (mask == kb_DecPnt)  return FUNC_ANS;
-            if (mask == kb_2)       return FUNC_UNIT;
-            if (mask == kb_5)       return FUNC_MEM;
-            if (mask == kb_8)       return FUNC_DISTR;
-            if (mask == kb_LParen)  return '{';
-            if (mask == kb_Cos)     return FUNC_COS_INV;
-            if (mask == kb_Prgm)    return FUNC_LIST;
-            if (mask == kb_Stat)    return FUNC_PROBABILITY;
-        }
-        // Group 5
-        else if (group == 5) {
-            if (mask == kb_Chs)     return FUNC_ENTRY;
-            if (mask == kb_3)       return FUNC_SOLVE;
-            if (mask == kb_6)       return FUNC_PARAMETRIC;
-            if (mask == kb_9)       return FUNC_POLAR;
-            if (mask == kb_RParen)  return '}';
-            if (mask == kb_Tan)     return FUNC_TAN_INV;
-            if (mask == kb_Vars)    return FUNC_STRING;
-        }
-        // Special function keys
-        else if (group == 6) {
-            if (mask == kb_Enter)   return KB_KEY_ENTER;
-            if (mask == kb_Add)     return FUNC_MEM_ADD;
-            if (mask == kb_Sub)     return FUNC_MEM_SUB;
-            if (mask == kb_Mul)     return FUNC_MEM_MUL;
-            if (mask == kb_Div)     return FUNC_MEM_DIV;
-            if (mask == kb_Power)   return FUNC_ROOT;
-            if (mask == kb_Clear)   return FUNC_RESET;
         }
     }
 

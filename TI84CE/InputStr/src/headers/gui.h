@@ -40,22 +40,6 @@ typedef struct {
     int highlight_color;  // Highlight color
 } GUISettings;
 
-/**
- * @brief Structure for a horizontally scrollable text field.
- */
-typedef struct {
-    char* text;             // Text content
-    int text_length;        // Length of the text
-    int buffer_size;        // Total buffer size allocated
-    int cursor_position;    // Cursor position in the text (character index)
-    int scroll_offset;      // Horizontal scroll offset (character index)
-    int x, y;               // Position on screen
-    int width;              // Width of the visible text field in pixels
-    int max_visible_chars;  // Maximum number of visible characters
-    bool has_border;        // Whether to draw a border
-    bool is_active;         // Whether this field is currently active/focused
-} HScrollTextField;
-
 #include "gui_public.h"
 
 #endif // GUI_H

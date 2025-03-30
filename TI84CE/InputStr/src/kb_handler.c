@@ -402,7 +402,7 @@ static KBCallbackID register_callback(CombinedKey key, CallbackType type, void* 
  * 
  * @return The current time in milliseconds, derived from the calculator's timer.
  */
-static unsigned long get_millis(void) {
+unsigned long get_millis(void) {
     // On the TI-84 CE, timer_1_Counter runs at 32768 Hz
     // Convert to milliseconds (approximately)
     return (unsigned long)(timer_1_Counter / 32.768);

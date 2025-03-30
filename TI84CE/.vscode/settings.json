@@ -2,5 +2,7 @@
     "files.associations": {
         "makefile.common": "makefile",
         "*.h": "c",
-    }
+        "*.x0": "c",
+        "*.x1": "c",
+        }
 }
