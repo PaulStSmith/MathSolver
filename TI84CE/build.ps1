@@ -106,17 +106,25 @@ if ($BuildType -ne "debug") {
 }
 Write-Line
 
-Write-Host "<#" -ForegroundColor DarkGray
-Write-Host " #  ___ " -ForegroundColor DarkGray
-Write-Host " # |   \ ___ _ _  ___ " -ForegroundColor DarkGray
-Write-Host " # | |) / _ \ ' \/ -_)" -ForegroundColor DarkGray
-Write-Host " # |___/\___/_||_\___|" -ForegroundColor DarkGray
-Write-Host " # " -ForegroundColor DarkGray
-Write-Host " #>" -ForegroundColor DarkGray
-
 # Check if build was successful
 if ($LASTEXITCODE -eq 0) {
+    Write-Host "<#" -ForegroundColor DarkGray
+    Write-Host " #  ___ " -ForegroundColor DarkGray
+    Write-Host " # |   \ ___ _ _  ___ " -ForegroundColor DarkGray
+    Write-Host " # | |) / _ \ ' \/ -_)" -ForegroundColor DarkGray
+    Write-Host " # |___/\___/_||_\___|" -ForegroundColor DarkGray
+    Write-Host " # " -ForegroundColor DarkGray
+    Write-Host " #>" -ForegroundColor DarkGray
+    
     Write-Host "Build completed successfully in $BuildType mode!" -ForegroundColor Green
 } else {
+    Write-Host "<#" -ForegroundColor DarkRed
+    Write-Host " #  ___                 " -ForegroundColor DarkRed
+    Write-Host " # | __|_ _ _ _ ___ _ _ " -ForegroundColor DarkRed
+    Write-Host " # | _|| '_| '_/ _ \ '_|" -ForegroundColor DarkRed
+    Write-Host " # |___|_| |_| \___/_|  " -ForegroundColor DarkRed
+    Write-Host " #                      " -ForegroundColor DarkRed
+    Write-Host " #>" -ForegroundColor DarkRed
+    
     Write-Host "Build failed with exit code $LASTEXITCODE" -ForegroundColor Red
 }

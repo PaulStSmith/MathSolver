@@ -48,7 +48,7 @@ typedef enum {
     KB_MODE_2ND,           // 2nd mode (blue functions)
     KB_MODE_ALPHA,         // Alpha mode (single uppercase letter)
     KB_MODE_ALPHA_LOCK,    // Alpha Lock mode (multiple uppercase letters)
-    KB_MODE_ALPHA_LOCK_LOWER // Alpha Lock Lower mode (lowercase letters)
+    KB_MODE_ALPHA_LOWER_LOCK // Alpha Lock Lower mode (lowercase letters)
 } KeyboardMode;
 ```
 

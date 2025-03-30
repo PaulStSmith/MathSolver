@@ -1,6 +1,6 @@
 #include <string.h>
 #include <stdio.h>
-#include "headers/kb_mapping.h"
+#include "headers/kb_mapping_private.h"
 
 /**
  * Initialize the keyboard state tracker.
@@ -9,11 +9,27 @@
  */
 KeyboardState key_mapping_init(void) {
     KeyboardState state;
-    state.current_mode = KB_MODE_NORMAL;
-    state.alpha_active = false;
-    state.second_active = false;
-    state.alpha_lock = false;
+    memset(&state, 0, sizeof(KeyboardState));
+    setKeyboardState(&state, KB_MODE_NORMAL);
     return state;
+}
+
+/**
+ * Set the keyboard mode and update the state accordingly.
+ * 
+ * @param state Pointer to the current keyboard state.
+ * @param mode The new keyboard mode to set.
+ */
+void setKeyboardState(KeyboardState* state, KeyboardMode mode) {
+    if (!state) return;    
+    state->current_mode = mode;
+    
+    // Keep legacy booleans in sync
+    state->is_alpha = (mode & KB_MODE_ALPHA) != 0;
+    state->is_second = (mode & KB_MODE_2ND) != 0;
+    state->is_alpha_lower = (mode & KB_MODE_LOWER) != 0;
+    state->is_alpha_lock = (mode & KB_MODE_ALPHA_LOCK) != 0;
+    state->is_alpha_lower_lock = (mode & KB_MODE_ALPHA_LOWER_LOCK) != 0;
 }
 
 /**
@@ -26,37 +42,37 @@ KeyboardState key_mapping_init(void) {
 bool key_mapping_process_mode_keys(CombinedKey key, KeyboardState* state) {
     if (!state) return false;
 
+    bool result = false;
+    KeyboardMode mode = state->current_mode;
+
     // Check for mode keys
-    if (key == MAKE_KEY(2, kb_Alpha)) {
-        // Alpha key pressed
-        if (state->second_active) {
-            // 2nd+Alpha = Alpha Lock mode
-            state->alpha_active  = true;
-            state->alpha_lock    = true;
-            state->second_active = false;
-            state->current_mode  = KB_MODE_ALPHA_LOCK;
-        } else if (state->alpha_lock) {
-            // If in alpha lock, pressing Alpha exits alpha lock
-            state->alpha_active  = false;
-            state->alpha_lock    = false;
-            state->current_mode  = KB_MODE_NORMAL;
-        } else {
-            // Regular Alpha key (temporary alpha mode)
-            state->alpha_active  = !state->alpha_active;
-            state->current_mode  = state->alpha_active ? KB_MODE_ALPHA : KB_MODE_NORMAL;
-        }
-        return true;
-    } else if (key == MAKE_KEY(1, kb_2nd)) {
+    if (key == KB_KEY_2ND) {
         // 2nd key pressed - toggle 2nd mode
-        state->second_active = !state->second_active;
-        state->current_mode  = state->second_active ? KB_MODE_2ND : KB_MODE_NORMAL;
-        return true;
-    } else if (state->current_mode == KB_MODE_ALPHA) {
-        state->alpha_active  = false;
-        state->current_mode  = KB_MODE_NORMAL;
+        mode ^= KB_MODE_2ND;
+        result = true;
+    } else if (key == KEY_ALPHA) {
+        // Alpha key pressed
+        if (mode & ~KB_MODE_ALPHA) {
+            mode |= KB_MODE_ALPHA;              // Set alpha mode
+        } else if (mode & KB_MODE_ALPHA) {
+            // If we are in alpha mode, change to alpha lower
+            mode |= KB_MODE_ALPHA_LOWER;        // Set alpha lower mode
+        } else if (mode & KB_MODE_LOWER) {
+            // If we are in lower mode, return to normal mode
+            mode = mode & ~KB_MODE_ALPHA_LOWER; // Remove alpha lower mode
+            mode = mode & ~KB_MODE_LOCK;      // Remove locked mode
+        }
+        
+        if (mode & KB_MODE_2ND) {
+            mode |= KB_MODE_LOCK;             // Set locked mode
+        } 
+        mode = mode & ~KB_MODE_2ND;             // Remove 2nd mode
+        result = true;
     }
 
-    return false;
+    // Update the keyboard state
+    setKeyboardState(state, mode); 
+    return result;
 }
 
 /**
@@ -69,12 +85,13 @@ bool key_mapping_process_mode_keys(CombinedKey key, KeyboardState* state) {
 int key_mapping_get_value(CombinedKey key, KeyboardState state) {
     int group     = KEY_GROUP(key);
     int mask      = KEY_MASK(key);
-    bool is_alpha = state.alpha_active;
-    bool is_2nd   = state.second_active;
-    bool is_alpha_lock_lower = (state.current_mode == KB_MODE_ALPHA_LOCK_LOWER);
+    bool is_2nd   = state.is_second;
+    bool is_alpha = state.is_alpha;
+    bool is_lower = state.is_alpha_lower;
+    bool is_normal = (!is_2nd && !is_alpha && !is_lower);
 
     // Handle normal mode (no alpha, no 2nd)
-    if (!is_alpha && !is_2nd) {
+    if (is_normal) {
         // Group 1: Graph, Trace, Zoom, Window, Y=, 2nd, Mode, Del
         if (group == 1) {
             if (mask == kb_Graph)    return FUNC_GRAPH;
@@ -146,48 +163,48 @@ int key_mapping_get_value(CombinedKey key, KeyboardState state) {
             if (mask == kb_Up)       return KB_KEY_UP;
         }
     }
-    // Handle alpha modes (both regular and lock)
+    // Handle alpha modes (both regular and lowercase)
     else if (is_alpha && !is_2nd) {
         // Per the Keyboard Modes.md file
         if (group == 2) {
-            if (mask == kb_Math)     return is_alpha_lock_lower ? 'a' : 'A';
-            if (mask == kb_Recip)    return is_alpha_lock_lower ? 'd' : 'D';
-            if (mask == kb_Square)   return is_alpha_lock_lower ? 'i' : 'I';
-            if (mask == kb_Log)      return is_alpha_lock_lower ? 'n' : 'N';
-            if (mask == kb_Ln)       return is_alpha_lock_lower ? 's' : 'S';
-            if (mask == kb_Sto)      return is_alpha_lock_lower ? 'x' : 'X';
+            if (mask == kb_Math)     return is_lower ? 'a' : 'A';
+            if (mask == kb_Recip)    return is_lower ? 'd' : 'D';
+            if (mask == kb_Square)   return is_lower ? 'i' : 'I';
+            if (mask == kb_Log)      return is_lower ? 'n' : 'N';
+            if (mask == kb_Ln)       return is_lower ? 's' : 'S';
+            if (mask == kb_Sto)      return is_lower ? 'x' : 'X';
         }
         else if (group == 3) {
-            if (mask == kb_Apps)     return is_alpha_lock_lower ? 'b' : 'B';
-            if (mask == kb_Sin)      return is_alpha_lock_lower ? 'e' : 'E';
-            if (mask == kb_7)        return is_alpha_lock_lower ? 'o' : 'O';
-            if (mask == kb_4)        return is_alpha_lock_lower ? 't' : 'T';
-            if (mask == kb_1)        return is_alpha_lock_lower ? 'y' : 'Y';
+            if (mask == kb_Apps)     return is_lower ? 'b' : 'B';
+            if (mask == kb_Sin)      return is_lower ? 'e' : 'E';
+            if (mask == kb_7)        return is_lower ? 'o' : 'O';
+            if (mask == kb_4)        return is_lower ? 't' : 'T';
+            if (mask == kb_1)        return is_lower ? 'y' : 'Y';
             if (mask == kb_0)        return ' '; // Space
-            if (mask == kb_Comma)    return is_alpha_lock_lower ? 'j' : 'J';
+            if (mask == kb_Comma)    return is_lower ? 'j' : 'J';
         }
         else if (group == 4) {
-            if (mask == kb_Prgm)     return is_alpha_lock_lower ? 'c' : 'C';
-            if (mask == kb_Cos)      return is_alpha_lock_lower ? 'f' : 'F';
-            if (mask == kb_8)        return is_alpha_lock_lower ? 'p' : 'P';
-            if (mask == kb_5)        return is_alpha_lock_lower ? 'u' : 'U';
-            if (mask == kb_2)        return is_alpha_lock_lower ? 'z' : 'Z';
+            if (mask == kb_Prgm)     return is_lower ? 'c' : 'C';
+            if (mask == kb_Cos)      return is_lower ? 'f' : 'F';
+            if (mask == kb_8)        return is_lower ? 'p' : 'P';
+            if (mask == kb_5)        return is_lower ? 'u' : 'U';
+            if (mask == kb_2)        return is_lower ? 'z' : 'Z';
             if (mask == kb_DecPnt)   return ':';
-            if (mask == kb_LParen)   return is_alpha_lock_lower ? 'k' : 'K';
+            if (mask == kb_LParen)   return is_lower ? 'k' : 'K';
         }
         else if (group == 5) {
-            if (mask == kb_Tan)      return is_alpha_lock_lower ? 'g' : 'G';
-            if (mask == kb_6)        return is_alpha_lock_lower ? 'v' : 'V';
+            if (mask == kb_Tan)      return is_lower ? 'g' : 'G';
+            if (mask == kb_6)        return is_lower ? 'v' : 'V';
             if (mask == kb_3)        return '\x5b'; // No lowercase for special chars
             if (mask == kb_Chs)      return '?';
-            if (mask == kb_9)        return is_alpha_lock_lower ? 'q' : 'Q';
-            if (mask == kb_RParen)   return is_alpha_lock_lower ? 'l' : 'L';
+            if (mask == kb_9)        return is_lower ? 'q' : 'Q';
+            if (mask == kb_RParen)   return is_lower ? 'l' : 'L';
         }
         else if (group == 6) {
-            if (mask == kb_Power)    return is_alpha_lock_lower ? 'h' : 'H';
-            if (mask == kb_Div)      return is_alpha_lock_lower ? 'm' : 'M';
-            if (mask == kb_Mul)      return is_alpha_lock_lower ? 'r' : 'R';
-            if (mask == kb_Sub)      return is_alpha_lock_lower ? 'w' : 'W';
+            if (mask == kb_Power)    return is_lower ? 'h' : 'H';
+            if (mask == kb_Div)      return is_lower ? 'm' : 'M';
+            if (mask == kb_Mul)      return is_lower ? 'r' : 'R';
+            if (mask == kb_Sub)      return is_lower ? 'w' : 'W';
             if (mask == kb_Add)      return '"';
             // Keep other keys the same
             if (mask == kb_Enter)    return KB_KEY_ENTER;
@@ -202,18 +219,24 @@ int key_mapping_get_value(CombinedKey key, KeyboardState state) {
         }
     }
     // Handle 2nd mode
-    else if (!is_alpha && is_2nd) {
+    else if (is_2nd) {
         // Per the Keyboard Modes.md file
         if (group == 2) {
             if (mask == kb_Recip)    return FUNC_X_INV;     // ^-1
             if (mask == kb_Square)   return FUNC_ROOT;      // sqrt(
             if (mask == kb_Log)      return FUNC_10_X;      // 10^
             if (mask == kb_Ln)       return FUNC_EXP;       // e^x
+            if (mask == kb_Sto)     return FUNC_RECALL;
+            if (mask == kb_Math)    return FUNC_TEST;
         }
         else if (group == 3) {
             if (mask == kb_Sin)      return FUNC_SIN_INV;   // asin(
             if (mask == kb_7)        return 'u';
             if (mask == kb_1)        return 0;              // Empty or special value?
+            if (mask == kb_0)       return FUNC_CATALOG;
+            if (mask == kb_Apps)    return FUNC_MATRIX;
+            if (mask == kb_GraphVar) return FUNC_DRAW;
+            if (mask == kb_4)       return FUNC_ANGLE;
         }
         else if (group == 4) {
             if (mask == kb_Cos)      return FUNC_COS_INV;   // acos(
@@ -221,67 +244,33 @@ int key_mapping_get_value(CombinedKey key, KeyboardState state) {
             if (mask == kb_2)        return 0;              // Empty or special value?
             if (mask == kb_LParen)   return '{';
             if (mask == kb_DecPnt)   return 0xD7;           // Mathematical constant i
+            if (mask == kb_Prgm)    return FUNC_LIST;
+            if (mask == kb_Stat)    return FUNC_PROBABILITY;
+            if (mask == kb_5)       return FUNC_MEM;
         }
         else if (group == 5) {
             if (mask == kb_Tan)      return FUNC_TAN_INV;   // atan(
             if (mask == kb_9)        return 'w';
             if (mask == kb_RParen)   return '}';
+            if (mask == kb_Chs)     return FUNC_ENTRY;
+            if (mask == kb_Vars)    return FUNC_STRING;
+            if (mask == kb_3)       return FUNC_SOLVE;
+            if (mask == kb_6)       return FUNC_PARAMETRIC;
         }
         else if (group == 6) {
             if (mask == kb_Power)    return 0xC4;           // Mathematical constant pi
             if (mask == kb_Div)      return 0xDB;           // Constant e
             if (mask == kb_Mul)      return 0x5B;           // '[' on TI84
             if (mask == kb_Sub)      return ']';
-        }
-        
-        // Standard 2nd key mappings (from your original code)
-        // Group 1: F1-F5 functions and catalog
-        if (group == 1) {
-            if (mask == kb_Graph)   return FUNC_TABLE;    // F5
-            if (mask == kb_Trace)   return FUNC_CALC;     // F4
-            if (mask == kb_Zoom)    return FUNC_FORMAT;   // F3
-            if (mask == kb_Window)  return FUNC_TBLSET;   // F2
-            if (mask == kb_Yequ)    return FUNC_STATPLOT; // F1
-            if (mask == kb_Mode)    return FUNC_QUIT;
-            if (mask == kb_Del)     return FUNC_INS;
-        }
-        // Group 2 (additional mappings)
-        else if (group == 2) {
-            if (mask == kb_Sto)     return FUNC_RECALL;
-            if (mask == kb_Math)    return FUNC_TEST;
-        }
-        // Group 3 (additional mappings)
-        else if (group == 3) {
-            if (mask == kb_0)       return FUNC_CATALOG;
-            if (mask == kb_Apps)    return FUNC_MATRIX;
-            if (mask == kb_GraphVar) return FUNC_DRAW;
-            if (mask == kb_4)       return FUNC_ANGLE;
-        }
-        // Group 4 (additional mappings)
-        else if (group == 4) {
-            if (mask == kb_Prgm)    return FUNC_LIST;
-            if (mask == kb_Stat)    return FUNC_PROBABILITY;
-            if (mask == kb_5)       return FUNC_MEM;
-        }
-        // Group 5 (additional mappings)
-        else if (group == 5) {
-            if (mask == kb_Chs)     return FUNC_ENTRY;
-            if (mask == kb_Vars)    return FUNC_STRING;
-            if (mask == kb_3)       return FUNC_SOLVE;
-            if (mask == kb_6)       return FUNC_PARAMETRIC;
-        }
-        // Group 6 (additional mappings)
-        else if (group == 6) {
             if (mask == kb_Enter)   return KB_KEY_ENTER;
             if (mask == kb_Add)     return FUNC_MEM_ADD;
             if (mask == kb_Clear)   return FUNC_RESET;
         }
-        // Group 7: Arrow keys - keep the same
         else if (group == 7) {
-            if (mask == kb_Down)    return KB_KEY_DOWN;
-            if (mask == kb_Left)    return KB_KEY_LEFT;
-            if (mask == kb_Right)   return KB_KEY_RIGHT;
-            if (mask == kb_Up)      return KB_KEY_UP;
+            if (mask == kb_Up)      return KB_KEY_PGUP;
+            if (mask == kb_Down)    return KB_KEY_PGDN;
+            if (mask == kb_Left)    return KB_KEY_HOME;
+            if (mask == kb_Right)   return KB_KEY_END;
         }
     }
 
@@ -301,18 +290,22 @@ void key_mapping_value_to_string(int key_value, char* buffer) {
     // Handle special keys
     if (key_value < 32) {
         switch (key_value) {
-            case KB_KEY_NULL:  strcpy(buffer, "NULL");  break;
-            case KB_KEY_ENTER: strcpy(buffer, "ENTER"); break;
-            case KB_KEY_CLEAR: strcpy(buffer, "CLEAR"); break;
-            case KB_KEY_DEL:   strcpy(buffer, "DEL");   break;
-            case KB_KEY_UP:    strcpy(buffer, "UP");    break;
-            case KB_KEY_DOWN:  strcpy(buffer, "DOWN");  break;
-            case KB_KEY_LEFT:  strcpy(buffer, "LEFT");  break;
-            case KB_KEY_RIGHT: strcpy(buffer, "RIGHT"); break;
-            case KB_KEY_2ND:   strcpy(buffer, "2ND");   break;
-            case KB_KEY_ALPHA: strcpy(buffer, "ALPHA"); break;
-            case KB_KEY_MODE:  strcpy(buffer, "MODE");  break;
-            default:           sprintf(buffer, "CTRL-%d", key_value);
+            case KB_KEY_HOME:   strcpy(buffer, "HOME");  break;
+            case KB_KEY_END:    strcpy(buffer, "END");   break;
+            case KB_KEY_PGUP:   strcpy(buffer, "PGUP");  break;
+            case KB_KEY_PGDN:   strcpy(buffer, "PGDN");  break;
+            case KB_KEY_NULL:   strcpy(buffer, "NULL");  break;
+            case KB_KEY_ENTER:  strcpy(buffer, "ENTER"); break;
+            case KB_KEY_CLEAR:  strcpy(buffer, "CLEAR"); break;
+            case KB_KEY_DEL:    strcpy(buffer, "DEL");   break;
+            case KB_KEY_UP:     strcpy(buffer, "UP");    break;
+            case KB_KEY_DOWN:   strcpy(buffer, "DOWN");  break;
+            case KB_KEY_LEFT:   strcpy(buffer, "LEFT");  break;
+            case KB_KEY_RIGHT:  strcpy(buffer, "RIGHT"); break;
+            case KB_KEY_2ND:    strcpy(buffer, "2ND");   break;
+            case KB_KEY_ALPHA:  strcpy(buffer, "ALPHA"); break;
+            case KB_KEY_MODE:   strcpy(buffer, "MODE");  break;
+            default:            sprintf(buffer, "CTRL-%d", key_value);
         }
     }
     // Handle normal ASCII characters

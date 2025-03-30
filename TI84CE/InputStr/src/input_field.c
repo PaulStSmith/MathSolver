@@ -397,7 +397,7 @@ static void process_mode_key(InputField* field, CombinedKey key) {
             // Pressing 2nd while in 2nd mode returns to normal
             field->kbd_mode = KB_MODE_NORMAL;
         } else if (field->kbd_mode == KB_MODE_ALPHA_LOCK || 
-                  field->kbd_mode == KB_MODE_ALPHA_LOCK_LOWER) {
+                  field->kbd_mode == KB_MODE_ALPHA_LOWER_LOCK) {
             // Exit alpha lock
             field->kbd_mode = KB_MODE_NORMAL;
         } else {
@@ -414,8 +414,8 @@ static void process_mode_key(InputField* field, CombinedKey key) {
             field->kbd_mode = KB_MODE_NORMAL;
         } else if (field->kbd_mode == KB_MODE_ALPHA_LOCK) {
             // Toggle between uppercase and lowercase in alpha lock
-            field->kbd_mode = KB_MODE_ALPHA_LOCK_LOWER;
-        } else if (field->kbd_mode == KB_MODE_ALPHA_LOCK_LOWER) {
+            field->kbd_mode = KB_MODE_ALPHA_LOWER_LOCK;
+        } else if (field->kbd_mode == KB_MODE_ALPHA_LOWER_LOCK) {
             // Toggle back to uppercase in alpha lock
             field->kbd_mode = KB_MODE_ALPHA_LOCK;
         } else {
@@ -434,13 +434,12 @@ static void process_mode_key(InputField* field, CombinedKey key) {
  */
 bool input_field_process_key(InputField* field, CombinedKey key) {
     // Handle special keys first
-    if (key == MAKE_KEY(6, kb_Clear) || key == MAKE_KEY(6, kb_Enter)) {
-        // These are handled by the calling function
-        return false;
-    } else if (key == MAKE_KEY(1, kb_Del)) {
+    if (key == KEY_CLEAR || key == KEY_ENTER || key == KEY_DEL) {
         // Delete key is handled by the calling function
         return true;
-    } else if (key == MAKE_KEY(7, kb_Left)) {
+    } 
+
+    if (key == MAKE_KEY(7, kb_Left)) {
         // Special 2nd+Left = cursor to start
         if (field->kbd_mode == KB_MODE_2ND) {
             input_field_cursor_to_start(field);
@@ -468,18 +467,15 @@ bool input_field_process_key(InputField* field, CombinedKey key) {
     
     // Get the value based on current keyboard mode
     KeyboardState kb_state;
-    kb_state.alpha_active = (field->kbd_mode == KB_MODE_ALPHA || 
-                            field->kbd_mode == KB_MODE_ALPHA_LOCK || 
-                            field->kbd_mode == KB_MODE_ALPHA_LOCK_LOWER);
-    kb_state.second_active = (field->kbd_mode == KB_MODE_2ND);
-    kb_state.alpha_lock = (field->kbd_mode == KB_MODE_ALPHA_LOCK || 
-                          field->kbd_mode == KB_MODE_ALPHA_LOCK_LOWER);
+    kb_state.is_alpha = (field->kbd_mode & KB_MODE_ALPHA);
+    kb_state.is_second = (field->kbd_mode & KB_MODE_2ND);
+    kb_state.is_alpha_lock = (field->kbd_mode & KB_MODE_ALPHA_LOCK);
     
     int value = key_mapping_get_value(key, kb_state);
     
     if (value >= 32 && value <= 126) {
         // For alpha lock lower, convert uppercase to lowercase
-        if (field->kbd_mode == KB_MODE_ALPHA_LOCK_LOWER && value >= 'A' && value <= 'Z') {
+        if (field->kbd_mode == KB_MODE_ALPHA_LOWER_LOCK && value >= 'A' && value <= 'Z') {
             value = value + ('a' - 'A');  // Convert to lowercase
         }
         
@@ -713,7 +709,7 @@ static void draw_mode_indicator_default(KeyboardMode mode, int x, int y) {
         case KB_MODE_ALPHA_LOCK:
             mode_text = "A-LOCK";
             break;
-        case KB_MODE_ALPHA_LOCK_LOWER:
+        case KB_MODE_ALPHA_LOWER_LOCK:
             mode_text = "a-lock";
             break;
     }

@@ -1,32 +1,37 @@
-#ifndef KB_MAPPING_H
-#define KB_MAPPING_H
+/**
+ * Key Translator for TI-84 CE (Layer 2)
+ * 
+ * Manages keyboard modes (Normal, 2nd, Alpha, etc.) and translates
+ * physical key presses into logical values based on current mode.
+ */
+
+#ifndef KEY_TRANSLATOR_H
+#define KEY_TRANSLATOR_H
 
 #include <stdbool.h>
-#include <tice.h>
-#include <keypadc.h>
-#include "kb_handler.h"
+#include "keyboard.h"
 
 /**
  * Constants for special key values that don't have direct character representations
  */
 typedef enum {
     // Control keys (values below 32 to avoid ASCII overlap)
-    KB_KEY_NULL      = 0,
-    KB_KEY_ENTER     = 1,
-    KB_KEY_CLEAR     = 2,
-    KB_KEY_DEL       = 3,
-    KB_KEY_UP        = 4,
-    KB_KEY_DOWN      = 5,
-    KB_KEY_LEFT      = 6,
-    KB_KEY_RIGHT     = 7,
-    KB_KEY_2ND       = 8,
-    KB_KEY_ALPHA     = 9,
-    KB_KEY_MODE      = 10,
-    KB_KEY_HOME      = 11,
-    KB_KEY_END       = 12,
-    KB_KEY_INSERT    = 13,
-    KB_KEY_PGUP      = 14,
-    KB_KEY_PGDN      = 15,
+    CHAR_NULL      = 0,
+    CHAR_ENTER     = 1,
+    CHAR_CLEAR     = 2,
+    CHAR_DEL       = 3,
+    CHAR_UP        = 4,
+    CHAR_DOWN      = 5,
+    CHAR_LEFT      = 6,
+    CHAR_RIGHT     = 7,
+    CHAR_2ND       = 8,
+    CHAR_ALPHA     = 9,
+    CHAR_MODE      = 10,
+    CHAR_HOME      = 11,
+    CHAR_END       = 12,
+    CHAR_INS       = 13,
+    CHAR_PGUP      = 14,
+    CHAR_PGDN      = 15,
     
     // Function keys (values start at 128 to avoid any character conflicts)
     FUNC_Y_EQUALS    = 128,
@@ -101,7 +106,7 @@ typedef enum {
     FUNC_PARAMETRIC  = 187,
     FUNC_POLAR       = 188,
     FUNC_STRING      = 189
-} SpecialKeyValue;
+} CharValue;
 
 /**
  * Calculator keyboard modes
@@ -111,55 +116,16 @@ typedef enum {
     KB_MODE_2ND              = 1,
     KB_MODE_ALPHA            = 2,
     KB_MODE_LOWER            = 4,
-    KB_MODE_LOCK           = 8,
-    KB_MODE_ALPHA_LOWER      = 6,   
-    KB_MODE_ALPHA_LOCK       = 10,
-    KB_MODE_ALPHA_LOWER_LOCK = 14
+    KB_MODE_LOCK             = 8,
+    KB_MODE_ALPHA_LOWER      = 6,   // ALPHA | LOWER
+    KB_MODE_ALPHA_LOCK       = 10,  // ALPHA | LOCKED
+    KB_MODE_ALPHA_LOWER_LOCK = 14   // ALPHA | LOWER | LOCKED
 } KeyboardMode;
 
-/**
- * Structure to track keyboard mode state
- */
-typedef struct {
-    KeyboardMode current_mode;
-    bool         is_second;
-    bool         is_alpha;
-    bool         is_alpha_lock;
-    bool         is_alpha_lower;
-    bool         is_alpha_lower_lock;
-} KeyboardState;
+// Callback types for character events
+typedef void (*CharDownCallback)(int value);
+typedef void (*CharPressCallback)(int value);
+typedef void (*CharUpCallback)(int value);
 
-/**
- * Initialize the keyboard state tracker
- * 
- * @return The initialized keyboard state
- */
-KeyboardState key_mapping_init(void);
-
-/**
- * Process mode keys (2nd, Alpha) and update keyboard state
- * 
- * @param key The physical key that was pressed
- * @param state Pointer to the current keyboard state
- * @return True if the key was a mode key and processed, false otherwise
- */
-bool key_mapping_process_mode_keys(CombinedKey key, KeyboardState* state);
-
-/**
- * Gets the character or function identifier for a key based on current keyboard mode.
- * 
- * @param key The physical key that was pressed (CombinedKey format)
- * @param state The current keyboard state (mode)
- * @return The character, function code, or special value representing the key in current mode
- */
-int key_mapping_get_value(CombinedKey key, KeyboardState state);
-
-/**
- * Gets a string representation of a key value (for debugging/display)
- * 
- * @param KB_KEY_value The key value to convert to string
- * @param buffer The buffer to write the string to (must be at least 16 bytes)
- */
-void key_mapping_value_to_string(int KB_KEY_value, char* buffer);
-
-#endif /* KB_MAPPING_H */
+#include "key_translator_public.h"
+#endif // KEY_TRANSLATOR_H

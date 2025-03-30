@@ -13,7 +13,7 @@ void draw_mode_indicator(KeyboardMode mode, int x, int y) {
         "2ND",       // KB_MODE_2ND
         "ALPHA",     // KB_MODE_ALPHA
         "A-LOCK",    // KB_MODE_ALPHA_LOCK
-        "a-lock"     // KB_MODE_ALPHA_LOCK_LOWER
+        "a-lock"     // KB_MODE_ALPHA_LOWER_LOCK
     };
     
     if (mode == KB_MODE_NORMAL) return;  // Don't display for normal mode
