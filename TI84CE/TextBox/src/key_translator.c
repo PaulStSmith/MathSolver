@@ -330,6 +330,228 @@ bool char_process_mode_key(Key key) {
 }
 
 /**
+ * Helper function to translate keys in normal mode (no 2nd, no alpha).
+ * 
+ * @param key The physical key to translate.
+ * @return The translated character value, or CHAR_NULL if no mapping exists.
+ */
+static int translate_normal_mode(Key key) {
+    int group = KEY_GROUP(key);
+    int mask = KEY_MASK(key);
+    
+    // Group 1: Graph, Trace, Zoom, Window, Y=, 2nd, Mode, Del
+    if (group == 1) {
+        if (mask == kb_Graph)    return FUNC_GRAPH;
+        if (mask == kb_Trace)    return FUNC_TRACE;
+        if (mask == kb_Zoom)     return FUNC_ZOOM;
+        if (mask == kb_Window)   return FUNC_WINDOW;
+        if (mask == kb_Yequ)     return FUNC_Y_EQUALS;
+        if (mask == kb_2nd)      return CHAR_2ND;     // Should be handled by char_process_mode_key
+        if (mask == kb_Mode)     return CHAR_MODE;
+        if (mask == kb_Del)      return CHAR_DEL;
+    }
+    // Group 2: Sto, Ln, Log, x², 1/x, Math, Alpha
+    else if (group == 2) {
+        if (mask == kb_Sto)      return FUNC_STO;
+        if (mask == kb_Ln)       return FUNC_LN;
+        if (mask == kb_Log)      return FUNC_LOG;
+        if (mask == kb_Square)   return FUNC_SQUARE;
+        if (mask == kb_Recip)    return FUNC_RECIP;
+        if (mask == kb_Math)     return FUNC_MATH;
+        if (mask == kb_Alpha)    return CHAR_ALPHA;   // Should be handled by char_process_mode_key
+    }
+    // Group 3: 0, 1, 4, 7, ,, sin, apps, x
+    else if (group == 3) {
+        if (mask == kb_0)        return '0';
+        if (mask == kb_1)        return '1';
+        if (mask == kb_4)        return '4';
+        if (mask == kb_7)        return '7';
+        if (mask == kb_Comma)    return ',';
+        if (mask == kb_Sin)      return FUNC_SIN;
+        if (mask == kb_Apps)     return FUNC_APPS;
+        if (mask == kb_GraphVar) return FUNC_X_VAR;
+    }
+    // Group 4: ., 2, 5, 8, (, cos, prgm, stat
+    else if (group == 4) {
+        if (mask == kb_DecPnt)  return '.';
+        if (mask == kb_2)       return '2';
+        if (mask == kb_5)       return '5';
+        if (mask == kb_8)       return '8';
+        if (mask == kb_LParen)  return '(';
+        if (mask == kb_Cos)     return FUNC_COS;
+        if (mask == kb_Prgm)    return FUNC_PRGM;
+        if (mask == kb_Stat)    return FUNC_STAT;
+    }
+    // Group 5: (-), 3, 6, 9, ), tan, vars
+    else if (group == 5) {
+        if (mask == kb_Chs)      return '-';
+        if (mask == kb_3)        return '3';
+        if (mask == kb_6)        return '6';
+        if (mask == kb_9)        return '9';
+        if (mask == kb_RParen)   return ')';
+        if (mask == kb_Tan)      return FUNC_TAN;
+        if (mask == kb_Vars)     return FUNC_VARS;
+    }
+    // Group 6: Enter, +, -, *, /, ^, clear
+    else if (group == 6) {
+        if (mask == kb_Enter)    return CHAR_ENTER;
+        if (mask == kb_Add)      return '+';
+        if (mask == kb_Sub)      return '-';
+        if (mask == kb_Mul)      return '*';
+        if (mask == kb_Div)      return '/';
+        if (mask == kb_Power)    return '^';
+        if (mask == kb_Clear)    return CHAR_CLEAR;
+    }
+    // Group 7: down, left, right, up
+    else if (group == 7) {
+        if (mask == kb_Down)     return CHAR_DOWN;
+        if (mask == kb_Left)     return CHAR_LEFT;
+        if (mask == kb_Right)    return CHAR_RIGHT;
+        if (mask == kb_Up)       return CHAR_UP;
+    }
+    
+    return CHAR_NULL;
+}
+
+/**
+ * Helper function to translate keys in alpha mode.
+ * 
+ * @param key The physical key to translate.
+ * @param is_lower Whether we're in lowercase alpha mode.
+ * @return The translated character value, or CHAR_NULL if no mapping exists.
+ */
+static int translate_alpha_mode(Key key, bool is_lower) {
+    int group = KEY_GROUP(key);
+    int mask = KEY_MASK(key);
+    
+    // Group 2: Sto, Ln, Log, x², 1/x, Math, Alpha
+    if (group == 2) {
+        if (mask == kb_Math)     return is_lower ? 'a' : 'A';
+        if (mask == kb_Recip)    return is_lower ? 'd' : 'D';
+        if (mask == kb_Square)   return is_lower ? 'i' : 'I';
+        if (mask == kb_Log)      return is_lower ? 'n' : 'N';
+        if (mask == kb_Ln)       return is_lower ? 's' : 'S';
+        if (mask == kb_Sto)      return is_lower ? 'x' : 'X';
+    }
+    // Group 3: 0, 1, 4, 7, ,, sin, apps, x
+    else if (group == 3) {
+        if (mask == kb_Apps)     return is_lower ? 'b' : 'B';
+        if (mask == kb_Sin)      return is_lower ? 'e' : 'E';
+        if (mask == kb_7)        return is_lower ? 'o' : 'O';
+        if (mask == kb_4)        return is_lower ? 't' : 'T';
+        if (mask == kb_1)        return is_lower ? 'y' : 'Y';
+        if (mask == kb_0)        return ' ';  // Space
+        if (mask == kb_Comma)    return is_lower ? 'j' : 'J';
+    }
+    // Group 4: ., 2, 5, 8, (, cos, prgm, stat
+    else if (group == 4) {
+        if (mask == kb_Prgm)     return is_lower ? 'c' : 'C';
+        if (mask == kb_Cos)      return is_lower ? 'f' : 'F';
+        if (mask == kb_8)        return is_lower ? 'p' : 'P';
+        if (mask == kb_5)        return is_lower ? 'u' : 'U';
+        if (mask == kb_2)        return is_lower ? 'z' : 'Z';
+        if (mask == kb_DecPnt)   return ':';
+        if (mask == kb_LParen)   return is_lower ? 'k' : 'K';
+    }
+    // Group 5: (-), 3, 6, 9, ), tan, vars
+    else if (group == 5) {
+        if (mask == kb_Tan)      return is_lower ? 'g' : 'G';
+        if (mask == kb_6)        return is_lower ? 'v' : 'V';
+        if (mask == kb_3)        return '[';  // No lowercase for special chars
+        if (mask == kb_Chs)      return '?';
+        if (mask == kb_9)        return is_lower ? 'q' : 'Q';
+        if (mask == kb_RParen)   return is_lower ? 'l' : 'L';
+    }
+    // Group 6: Enter, +, -, *, /, ^, clear
+    else if (group == 6) {
+        if (mask == kb_Power)    return is_lower ? 'h' : 'H';
+        if (mask == kb_Div)      return is_lower ? 'm' : 'M';
+        if (mask == kb_Mul)      return is_lower ? 'r' : 'R';
+        if (mask == kb_Sub)      return is_lower ? 'w' : 'W';
+        if (mask == kb_Add)      return '"';
+        // Keep other keys the same
+        if (mask == kb_Enter)    return CHAR_ENTER;
+        if (mask == kb_Clear)    return CHAR_CLEAR;
+    }
+    // Arrow keys (Group 7) - keep the same in all modes
+    else if (group == 7) {
+        if (mask == kb_Down)     return CHAR_DOWN;
+        if (mask == kb_Left)     return CHAR_LEFT;
+        if (mask == kb_Right)    return CHAR_RIGHT;
+        if (mask == kb_Up)       return CHAR_UP;
+    }
+    
+    return CHAR_NULL;
+}
+
+/**
+ * Helper function to translate keys in 2nd mode.
+ * 
+ * @param key The physical key to translate.
+ * @return The translated character value, or CHAR_NULL if no mapping exists.
+ */
+static int translate_2nd_mode(Key key) {
+    int group = KEY_GROUP(key);
+    int mask = KEY_MASK(key);
+    
+    // Group 2: Sto, Ln, Log, x², 1/x, Math, Alpha
+    if (group == 2) {
+        if (mask == kb_Recip)    return FUNC_X_INV;     // ^-1
+        if (mask == kb_Square)   return FUNC_ROOT;      // sqrt(
+        if (mask == kb_Log)      return FUNC_10_X;      // 10^
+        if (mask == kb_Ln)       return FUNC_EXP;       // e^x
+        if (mask == kb_Sto)      return FUNC_RECALL;
+        if (mask == kb_Math)     return FUNC_TEST;
+    }
+    // Group 3: 0, 1, 4, 7, ,, sin, apps, x
+    else if (group == 3) {
+        if (mask == kb_Sin)      return FUNC_SIN_INV;   // asin(
+        if (mask == kb_7)        return 'u';
+        if (mask == kb_Apps)     return FUNC_MATRIX;
+        if (mask == kb_GraphVar) return FUNC_DRAW;
+        if (mask == kb_4)        return FUNC_ANGLE;
+    }
+    // Group 4: ., 2, 5, 8, (, cos, prgm, stat
+    else if (group == 4) {
+        if (mask == kb_Cos)      return FUNC_COS_INV;   // acos(
+        if (mask == kb_8)        return 'v';
+        if (mask == kb_LParen)   return '{';
+        if (mask == kb_Prgm)     return FUNC_LIST;
+        if (mask == kb_Stat)     return FUNC_PROBABILITY;
+        if (mask == kb_5)        return FUNC_MEM;
+    }
+    // Group 5: (-), 3, 6, 9, ), tan, vars
+    else if (group == 5) {
+        if (mask == kb_Tan)      return FUNC_TAN_INV;   // atan(
+        if (mask == kb_9)        return 'w';
+        if (mask == kb_RParen)   return '}';
+        if (mask == kb_Chs)      return FUNC_ENTRY;
+        if (mask == kb_Vars)     return FUNC_STRING;
+        if (mask == kb_3)        return FUNC_SOLVE;
+        if (mask == kb_6)        return FUNC_PARAMETRIC;
+    }
+    // Group 6: Enter, +, -, *, /, ^, clear
+    else if (group == 6) {
+        if (mask == kb_Power)    return FUNC_PI;        // π
+        if (mask == kb_Div)      return 'e';            // Constant e
+        if (mask == kb_Mul)      return '[';
+        if (mask == kb_Sub)      return ']';
+        if (mask == kb_Enter)    return CHAR_ENTER;
+        if (mask == kb_Add)      return FUNC_MEM_ADD;
+        if (mask == kb_Clear)    return FUNC_RESET;
+    }
+    // Group 7: down, left, right, up
+    else if (group == 7) {
+        if (mask == kb_Up)       return CHAR_PGUP;
+        if (mask == kb_Down)     return CHAR_PGDN;
+        if (mask == kb_Left)     return CHAR_HOME;
+        if (mask == kb_Right)    return CHAR_END;
+    }
+    
+    return CHAR_NULL;
+}
+
+/**
  * Translate a physical key to a character value based on the current keyboard mode.
  * 
  * @param key The physical key to translate.
@@ -337,200 +559,34 @@ bool char_process_mode_key(Key key) {
  */
 int char_translate_key(Key key) {
     log_message("char_translate_key: Translating key %d.", key);
-    int group = KEY_GROUP(key);
-    int mask = KEY_MASK(key);
-    bool is_2nd = (current_mode & KB_MODE_2ND) != 0;
-    bool is_alpha = (current_mode & KB_MODE_ALPHA) != 0;
-    bool is_lower = (current_mode & KB_MODE_LOWER) != 0;
     
     // Special mode keys - not translated
     if (key == KEY_2ND || key == KEY_ALPHA) {
         return (key == KEY_2ND) ? CHAR_2ND : CHAR_ALPHA;
     }
     
-    // Handle normal mode (no alpha, no 2nd)
-    if (!is_2nd && !is_alpha) {
-        // Group 1: Graph, Trace, Zoom, Window, Y=, 2nd, Mode, Del
-        if (group == 1) {
-            if (mask == kb_Graph)    return FUNC_GRAPH;
-            if (mask == kb_Trace)    return FUNC_TRACE;
-            if (mask == kb_Zoom)     return FUNC_ZOOM;
-            if (mask == kb_Window)   return FUNC_WINDOW;
-            if (mask == kb_Yequ)     return FUNC_Y_EQUALS;
-            if (mask == kb_2nd)      return CHAR_2ND;     // Should be handled by char_process_mode_key
-            if (mask == kb_Mode)     return CHAR_MODE;
-            if (mask == kb_Del)      return CHAR_DEL;
-        }
-        // Group 2: Sto, Ln, Log, x², 1/x, Math, Alpha
-        else if (group == 2) {
-            if (mask == kb_Sto)      return FUNC_STO;
-            if (mask == kb_Ln)       return FUNC_LN;
-            if (mask == kb_Log)      return FUNC_LOG;
-            if (mask == kb_Square)   return FUNC_SQUARE;
-            if (mask == kb_Recip)    return FUNC_RECIP;
-            if (mask == kb_Math)     return FUNC_MATH;
-            if (mask == kb_Alpha)    return CHAR_ALPHA;   // Should be handled by char_process_mode_key
-        }
-        // Group 3: 0, 1, 4, 7, ,, sin, apps, x
-        else if (group == 3) {
-            if (mask == kb_0)        return '0';
-            if (mask == kb_1)        return '1';
-            if (mask == kb_4)        return '4';
-            if (mask == kb_7)        return '7';
-            if (mask == kb_Comma)    return ',';
-            if (mask == kb_Sin)      return FUNC_SIN;
-            if (mask == kb_Apps)     return FUNC_APPS;
-            if (mask == kb_GraphVar) return FUNC_X_VAR;
-        }
-        // Group 4: ., 2, 5, 8, (, cos, prgm, stat
-        else if (group == 4) {
-            if (mask == kb_DecPnt)  return '.';
-            if (mask == kb_2)       return '2';
-            if (mask == kb_5)       return '5';
-            if (mask == kb_8)       return '8';
-            if (mask == kb_LParen)  return '(';
-            if (mask == kb_Cos)     return FUNC_COS;
-            if (mask == kb_Prgm)    return FUNC_PRGM;
-            if (mask == kb_Stat)    return FUNC_STAT;
-        }
-        // Group 5: (-), 3, 6, 9, ), tan, vars
-        else if (group == 5) {
-            if (mask == kb_Chs)      return '-';
-            if (mask == kb_3)        return '3';
-            if (mask == kb_6)        return '6';
-            if (mask == kb_9)        return '9';
-            if (mask == kb_RParen)   return ')';
-            if (mask == kb_Tan)      return FUNC_TAN;
-            if (mask == kb_Vars)     return FUNC_VARS;
-        }
-        // Group 6: Enter, +, -, *, /, ^, clear
-        else if (group == 6) {
-            if (mask == kb_Enter)    return CHAR_ENTER;
-            if (mask == kb_Add)      return '+';
-            if (mask == kb_Sub)      return '-';
-            if (mask == kb_Mul)      return '*';
-            if (mask == kb_Div)      return '/';
-            if (mask == kb_Power)    return '^';
-            if (mask == kb_Clear)    return CHAR_CLEAR;
-        }
-        // Group 7: down, left, right, up
-        else if (group == 7) {
-            if (mask == kb_Down)     return CHAR_DOWN;
-            if (mask == kb_Left)     return CHAR_LEFT;
-            if (mask == kb_Right)    return CHAR_RIGHT;
-            if (mask == kb_Up)       return CHAR_UP;
-        }
-    }
-    // Handle alpha modes (both regular and lowercase)
-    else if (is_alpha && !is_2nd) {
-        // Per the Keyboard Modes.md file
-        if (group == 2) {
-            if (mask == kb_Math)     return is_lower ? 'a' : 'A';
-            if (mask == kb_Recip)    return is_lower ? 'd' : 'D';
-            if (mask == kb_Square)   return is_lower ? 'i' : 'I';
-            if (mask == kb_Log)      return is_lower ? 'n' : 'N';
-            if (mask == kb_Ln)       return is_lower ? 's' : 'S';
-            if (mask == kb_Sto)      return is_lower ? 'x' : 'X';
-        }
-        else if (group == 3) {
-            if (mask == kb_Apps)     return is_lower ? 'b' : 'B';
-            if (mask == kb_Sin)      return is_lower ? 'e' : 'E';
-            if (mask == kb_7)        return is_lower ? 'o' : 'O';
-            if (mask == kb_4)        return is_lower ? 't' : 'T';
-            if (mask == kb_1)        return is_lower ? 'y' : 'Y';
-            if (mask == kb_0)        return ' ';  // Space
-            if (mask == kb_Comma)    return is_lower ? 'j' : 'J';
-        }
-        else if (group == 4) {
-            if (mask == kb_Prgm)     return is_lower ? 'c' : 'C';
-            if (mask == kb_Cos)      return is_lower ? 'f' : 'F';
-            if (mask == kb_8)        return is_lower ? 'p' : 'P';
-            if (mask == kb_5)        return is_lower ? 'u' : 'U';
-            if (mask == kb_2)        return is_lower ? 'z' : 'Z';
-            if (mask == kb_DecPnt)   return ':';
-            if (mask == kb_LParen)   return is_lower ? 'k' : 'K';
-        }
-        else if (group == 5) {
-            if (mask == kb_Tan)      return is_lower ? 'g' : 'G';
-            if (mask == kb_6)        return is_lower ? 'v' : 'V';
-            if (mask == kb_3)        return '[';  // No lowercase for special chars
-            if (mask == kb_Chs)      return '?';
-            if (mask == kb_9)        return is_lower ? 'q' : 'Q';
-            if (mask == kb_RParen)   return is_lower ? 'l' : 'L';
-        }
-        else if (group == 6) {
-            if (mask == kb_Power)    return is_lower ? 'h' : 'H';
-            if (mask == kb_Div)      return is_lower ? 'm' : 'M';
-            if (mask == kb_Mul)      return is_lower ? 'r' : 'R';
-            if (mask == kb_Sub)      return is_lower ? 'w' : 'W';
-            if (mask == kb_Add)      return '"';
-            // Keep other keys the same
-            if (mask == kb_Enter)    return CHAR_ENTER;
-            if (mask == kb_Clear)    return CHAR_CLEAR;
-        }
-        // Arrow keys (Group 7) - keep the same in all modes
-        else if (group == 7) {
-            if (mask == kb_Down)     return CHAR_DOWN;
-            if (mask == kb_Left)     return CHAR_LEFT;
-            if (mask == kb_Right)    return CHAR_RIGHT;
-            if (mask == kb_Up)       return CHAR_UP;
-        }
-    }
-    // Handle 2nd mode
-    else if (is_2nd) {
-        // Per the Keyboard Modes.md file
-        if (group == 2) {
-            if (mask == kb_Recip)    return FUNC_X_INV;     // ^-1
-            if (mask == kb_Square)   return FUNC_ROOT;      // sqrt(
-            if (mask == kb_Log)      return FUNC_10_X;      // 10^
-            if (mask == kb_Ln)       return FUNC_EXP;       // e^x
-            if (mask == kb_Sto)      return FUNC_RECALL;
-            if (mask == kb_Math)     return FUNC_TEST;
-        }
-        else if (group == 3) {
-            if (mask == kb_Sin)      return FUNC_SIN_INV;   // asin(
-            if (mask == kb_7)        return 'u';
-            if (mask == kb_Apps)     return FUNC_MATRIX;
-            if (mask == kb_GraphVar) return FUNC_DRAW;
-            if (mask == kb_4)        return FUNC_ANGLE;
-        }
-        else if (group == 4) {
-            if (mask == kb_Cos)      return FUNC_COS_INV;   // acos(
-            if (mask == kb_8)        return 'v';
-            if (mask == kb_LParen)   return '{';
-            if (mask == kb_Prgm)     return FUNC_LIST;
-            if (mask == kb_Stat)     return FUNC_PROBABILITY;
-            if (mask == kb_5)        return FUNC_MEM;
-        }
-        else if (group == 5) {
-            if (mask == kb_Tan)      return FUNC_TAN_INV;   // atan(
-            if (mask == kb_9)        return 'w';
-            if (mask == kb_RParen)   return '}';
-            if (mask == kb_Chs)      return FUNC_ENTRY;
-            if (mask == kb_Vars)     return FUNC_STRING;
-            if (mask == kb_3)        return FUNC_SOLVE;
-            if (mask == kb_6)        return FUNC_PARAMETRIC;
-        }
-        else if (group == 6) {
-            if (mask == kb_Power)    return FUNC_PI;        // π
-            if (mask == kb_Div)      return 'e';            // Constant e
-            if (mask == kb_Mul)      return '[';
-            if (mask == kb_Sub)      return ']';
-            if (mask == kb_Enter)    return CHAR_ENTER;
-            if (mask == kb_Add)      return FUNC_MEM_ADD;
-            if (mask == kb_Clear)    return FUNC_RESET;
-        }
-        else if (group == 7) {
-            if (mask == kb_Up)       return CHAR_PGUP;
-            if (mask == kb_Down)     return CHAR_PGDN;
-            if (mask == kb_Left)     return CHAR_HOME;
-            if (mask == kb_Right)    return CHAR_END;
-        }
+    // Get current mode flags
+    bool is_2nd = (current_mode & KB_MODE_2ND) != 0;
+    bool is_alpha = (current_mode & KB_MODE_ALPHA) != 0;
+    bool is_lower = (current_mode & KB_MODE_LOWER) != 0;
+    
+    // Call appropriate translation function based on mode
+    int result;
+    if (is_alpha && !is_2nd) {
+        result = translate_alpha_mode(key, is_lower);
+    } else if (is_2nd) {
+        result = translate_2nd_mode(key);
+    } else {
+        result = translate_normal_mode(key);
     }
     
-    // Default: return CHAR_NULL if no mapping found
-    int result = CHAR_NULL;
-    log_message("char_translate_key: Translated key %d to character value %d.", key, result);
+    // If no mapping was found in any mode, return CHAR_NULL
+    if (result == CHAR_NULL) {
+        log_message("char_translate_key: No mapping found for key %d.", key);
+    } else {
+        log_message("char_translate_key: Translated key %d to character value %d.", key, result);
+    }
+    
     return result;
 }
 
