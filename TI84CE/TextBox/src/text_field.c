@@ -13,11 +13,6 @@
 // Default initial buffer size
 #define INITIAL_BUFFER_SIZE 64
 
-// Global reference to the active text field (for callbacks)
-static TextField* active_field = NULL;
-static int char_down_id = -1;
-static int char_press_id = -1;
-
 /**
  * Initialize a text field.
  */
@@ -387,32 +382,41 @@ static void process_navigation(TextField* field, int value) {
 
 /**
  * Process an editing key.
+ * Returns true if the key was processed, false if it should cause the input to end.
  */
-static void process_edit(TextField* field, int value) {
-    if (!field || field->read_only) return;
+static bool process_edit(TextField* field, int value) {
+    if (!field) return true;
     
     switch (value) {
         case CHAR_DEL:
-            // If cursor is at the end, behave like backspace
-            if (field->cursor_position == field->text_length) {
-                text_field_backspace(field);
-            } else {
-                // Otherwise, delete the character at cursor
-                text_field_delete(field);
+            if (!field->read_only) {
+                // If cursor is at the end, behave like backspace
+                if (field->cursor_position == field->text_length) {
+                    text_field_backspace(field);
+                } else {
+                    // Otherwise, delete the character at cursor
+                    text_field_delete(field);
+                }
             }
-            break;
+            return true;
             
         case CHAR_CLEAR:
-            if (field->text_length > 0) {
+            if (!field->read_only && field->text_length > 0) {
                 text_field_clear(field);
+                return true;
+            } else if (field->text_length == 0) {
+                // Exit if text field is already empty and Clear is pressed
+                return false;
             }
-            break;
+            return true;
             
         case CHAR_INS:
             // Toggle insert mode (not implemented yet)
-            break;
+            return true;
             
         // Add more editing cases as needed
+        default:
+            return true;
     }
 }
 
@@ -421,6 +425,7 @@ static void process_edit(TextField* field, int value) {
  */
 static void process_character_input(TextField* field, int value) {
     if (!field || field->read_only) return;
+    log_message("Processing character input: %d", value);
     
     // Handle printable ASCII characters
     if (value >= 32 && value <= 126) {
@@ -429,80 +434,6 @@ static void process_character_input(TextField* field, int value) {
     // Handle function key input (math functions, etc.)
     else if (value >= 128) {
         // TODO: Handle special function keys for math input
-    }
-}
-
-/**
- * Handle character down events from the key translator.
- */
-static void on_char_down(int value) {
-    if (!active_field) return;
-    log_message("Character down event: value %d", value);
-    
-    // Handle special control keys
-    switch (value) {
-        case CHAR_ENTER:
-            if (active_field->on_enter) {
-                active_field->on_enter(active_field);
-            }
-            break;
-            
-        case CHAR_CLEAR:
-            if (active_field->text_length == 0) {
-                // Special case: Clear on empty field triggers exit
-                return;
-            }
-            process_edit(active_field, value);
-            break;
-            
-        case CHAR_DEL:
-        case CHAR_INS:
-            process_edit(active_field, value);
-            break;
-            
-        case CHAR_LEFT:
-        case CHAR_RIGHT:
-        case CHAR_HOME:
-        case CHAR_END:
-        case CHAR_UP:
-        case CHAR_DOWN:
-            process_navigation(active_field, value);
-            break;
-            
-        case CHAR_2ND:
-        case CHAR_ALPHA:
-        case CHAR_MODE:
-            // These are handled by the key translator
-            break;
-            
-        default:
-            // Process regular character input
-            process_character_input(active_field, value);
-            break;
-    }
-}
-
-/**
- * Handle character press events (repeating) from the key translator.
- */
-static void on_char_press(int value) {
-    if (!active_field) return;
-    log_message("Character press event: value %d", value);
-    
-    // Only handle navigation keys for repeating
-    switch (value) {
-        case CHAR_LEFT:
-        case CHAR_RIGHT:
-        case CHAR_HOME:
-        case CHAR_END:
-        case CHAR_UP:
-        case CHAR_DOWN:
-            process_navigation(active_field, value);
-            break;
-            
-        case CHAR_DEL:
-            process_edit(active_field, value);
-            break;
     }
 }
 
@@ -640,79 +571,98 @@ void text_field_draw(TextField* field) {
         gfx_Line(tri_x + 4, tri_y, tri_x, tri_y + 3); // Bottom line of triangle
         gfx_Line(tri_x, tri_y - 3, tri_x, tri_y + 3); // Vertical line to close triangle
     }
-    log_message("Text field drawn successfully");
 }
 
 /**
  * Give focus to a text field and process input until focus is lost.
+ * This now uses the procedural char_get_char() approach.
  */
 TextResult text_field_get_focus(TextField* field) {
     if (!field) return TEXT_RESULT_CANCEL;
     log_message("Text field gaining focus");
     
-    // Initialize character handling if needed
+    // Initialize character handling
     char_init();
     
-    // Store current field as active for callbacks
-    active_field = field;
+    // Mark field as active
     field->is_active = true;
     
-    // Register with the key translator
-    char_down_id = char_register_down(on_char_down);
-    char_press_id = char_register_press(on_char_press, 500, 100);
+    // Draw the field initially
+    text_field_draw(field);
+    if (field->mode_indicator_callback) {
+        field->mode_indicator_callback(char_get_mode(), field->x, field->y - 12);
+    }
+    GUI_refresh();
     
-    // Result code to return
+    // Process input until done
     TextResult result = TEXT_RESULT_CANCEL;
     bool processing = true;
     
-    // Process input until done
     while (processing) {
-        // Process key events
-        char_scan();
+        // Get the next character input (this blocks until a key is pressed)
+        int value = char_get_char();
         
-        // Draw the field
-        text_field_draw(field);
-        
-        // Draw the keyboard mode indicator if callback is set
-        if (field->mode_indicator_callback) {
-            field->mode_indicator_callback(char_get_mode(), field->x, field->y - 12);
-        }
-        
-        // Update display
-        GUI_refresh();
-        
-        // Check for special exit conditions
-        Key key = key_get_pressed();
-        if (key == KEY_ENTER) {
-            if (field->next_field) {
-                result = TEXT_RESULT_NEXT;
-            } else {
+        // Handle the character value
+        switch (value) {
+            case CHAR_ENTER:
                 if (field->on_enter) {
                     field->on_enter(field);
                 }
-                result = TEXT_RESULT_ENTER;
-            }
-            processing = false;
-        }
-        else if (key == KEY_CLEAR && field->text_length == 0) {
-            result = TEXT_RESULT_CLEAR;
-            processing = false;
+                
+                if (field->next_field) {
+                    result = TEXT_RESULT_NEXT;
+                } else {
+                    result = TEXT_RESULT_ENTER;
+                }
+                processing = false;
+                break;
+                
+            case CHAR_LEFT:
+            case CHAR_RIGHT:
+            case CHAR_HOME:
+            case CHAR_END:
+            case CHAR_UP:
+            case CHAR_DOWN:
+                process_navigation(field, value);
+                break;
+                
+            case CHAR_DEL:
+            case CHAR_CLEAR:
+            case CHAR_INS:
+                if (!process_edit(field, value)) {
+                    // If process_edit returns false, it means we should exit
+                    result = TEXT_RESULT_CLEAR;
+                    processing = false;
+                }
+                break;
+                
+            case CHAR_2ND:
+            case CHAR_ALPHA:
+            case CHAR_MODE:
+                // These are handled by the key translator
+                break;
+                
+            default:
+                // Process regular character input
+                process_character_input(field, value);
+                break;
         }
         
-        // Small delay to reduce CPU usage
-        delay(10);
+        // Redraw the field after each key press
+        text_field_draw(field);
+        if (field->mode_indicator_callback) {
+            field->mode_indicator_callback(char_get_mode(), field->x, field->y - 12);
+        }
+        GUI_refresh();
     }
     
-    // Clean up
-    char_unregister(char_down_id);
-    char_unregister(char_press_id);
-    char_down_id = -1;
-    char_press_id = -1;
-    active_field = NULL;
+    // Mark field as inactive when done
     field->is_active = false;
     
-    // Wait for key release before exiting
-    key_wait_release();
+    // Final redraw to show inactive state
+    text_field_draw(field);
+    GUI_refresh();
+    
     log_message("Text field focus processing completed with result %d", result);
     return result;
 }

@@ -260,39 +260,22 @@ void char_clear_callbacks(void) {
 }
 
 /**
- * Process keyboard events once and trigger character callbacks.
- * Calls the keyboard layer's scan function to process key events.
- */
-void char_scan(void) {
-    log_message("char_scan: Scanning for keyboard events.");
-    if (!char_initialized) char_init();
-    
-    // Let the keyboard layer process key events
-    key_scan();
-}
-
-/**
  * Wait for any character input.
  * Blocks until a key is pressed and returns the translated character value.
  * 
  * @return The translated character value of the pressed key.
  */
-int char_wait_any(void) {
-    log_message("char_wait_any: Waiting for any character input.");
+int char_get_char(void) {
+    log_message("char_get_char: Waiting for any character input.");
     if (!char_initialized) char_init();
     
-    last_key_value = CHAR_NULL;
+    // Wait for a key press and process it completely
+    Key key = key_wait();
     
-    // Wait for a translated key value
-    while (last_key_value == CHAR_NULL) {
-        char_scan();
-        delay(10);
-    }
+    // Return the translated value
+    CharValue result = last_key_value = char_translate_key(key);
     
-    int result = last_key_value;
-    last_key_value = CHAR_NULL;
-    
-    log_message("char_wait_any: Received character input: %d.", result);
+    log_message("char_get_char: Received character input: %d.", result);
     return result;
 }
 
@@ -644,6 +627,7 @@ void char_value_to_string(int value, char* buffer) {
  */
 static void on_key_down(Key key) {
     log_message("on_key_down: Key down event for key %d.", key);
+    
     // Process mode keys first
     if (char_process_mode_key(key)) {
         return;
@@ -680,6 +664,7 @@ static void on_key_down(Key key) {
  */
 static void on_key_press(Key key) {
     log_message("on_key_press: Key press event for key %d.", key);
+    
     // Skip if this is a mode key or if it's different from our last key
     if (key == KEY_2ND || key == KEY_ALPHA || key != last_physical_key) {
         return;
@@ -701,6 +686,7 @@ static void on_key_press(Key key) {
  */
 static void on_key_up(Key key) {
     log_message("on_key_up: Key up event for key %d.", key);
+    
     // Skip if this is a mode key or if it's different from our last key
     if (key == KEY_2ND || key == KEY_ALPHA || key != last_physical_key) {
         return;
