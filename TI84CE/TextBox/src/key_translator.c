@@ -457,7 +457,7 @@ static int translate_alpha_mode(Key key, bool is_lower) {
     else if (group == 5) {
         if (mask == kb_Tan)      return is_lower ? 'g' : 'G';
         if (mask == kb_6)        return is_lower ? 'v' : 'V';
-        if (mask == kb_3)        return '[';  // No lowercase for special chars
+        if (mask == kb_3)        return 0x5b; // Theta
         if (mask == kb_Chs)      return '?';
         if (mask == kb_9)        return is_lower ? 'q' : 'Q';
         if (mask == kb_RParen)   return is_lower ? 'l' : 'L';
@@ -533,8 +533,8 @@ static int translate_2nd_mode(Key key) {
     // Group 6: Enter, +, -, *, /, ^, clear
     else if (group == 6) {
         if (mask == kb_Power)    return FUNC_PI;        // π
-        if (mask == kb_Div)      return 'e';            // Constant e
-        if (mask == kb_Mul)      return '[';
+        if (mask == kb_Div)      return FUNC_E;         // Constant e
+        if (mask == kb_Mul)      return 0xc1;           // ´[´ on the TI-84+ CE
         if (mask == kb_Sub)      return ']';
         if (mask == kb_Enter)    return CHAR_ENTER;
         if (mask == kb_Add)      return FUNC_MEM_ADD;

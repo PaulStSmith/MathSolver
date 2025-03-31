@@ -92,7 +92,8 @@ typedef enum {
     FUNC_X_SQUARED   = 154,
     FUNC_X_INV       = 155,
     FUNC_EXP         = 156,
-    FUNC_PI          = 157,
+    FUNC_PI          = 157, // π constant (not a function key)
+    FUNC_E           = 190, // E constant (not a function key)
     FUNC_ANS         = 158,
     FUNC_ENTRY       = 159,
     FUNC_CATALOG     = 160,
