@@ -108,7 +108,7 @@ The Text Field layer provides a complete text input component that handles text 
 
 ### Key Functions:
 - `text_field_init` - Initialize a text field with given parameters
-- `text_field_get_focus` - Process input until completion (Enter, Clear, etc.)
+- `text_field_activate` - Process input until completion (Enter, Clear, etc.)
 - `text_field_set_text` - Set the content of the text field
 - `text_field_get_text` - Get the current content of the text field
 - `text_field_draw` - Render the text field on screen
@@ -120,7 +120,7 @@ TextField input_field;
 text_field_init(&input_field, 10, 30, 100, true);
 
 // Give focus to the field and process input
-InputResult result = text_field_get_focus(&input_field);
+InputResult result = text_field_activate(&input_field);
 
 // Check the result
 if (result == INPUT_RESULT_ENTER) {
@@ -134,7 +134,7 @@ if (result == INPUT_RESULT_ENTER) {
 
 Rather than true event-driven programming, the architecture uses nested blocking calls with callbacks:
 
-1. The application calls `text_field_get_focus()`
+1. The application calls `text_field_activate()`
 2. The text field registers callbacks with the key translator for character events
 3. The key translator registers its callbacks with the keyboard layer
 4. The text field calls `char_wait_press()` to wait for character input
@@ -205,14 +205,14 @@ text_field_init(&name_field, 10, 30, 100, true);
 text_field_init(&email_field, 10, 50, 100, true);
 
 // First field
-InputResult result = text_field_get_focus(&name_field);
+InputResult result = text_field_activate(&name_field);
 if (result == INPUT_RESULT_CLEAR) {
     // User canceled
     return;
 }
 
 // Second field
-result = text_field_get_focus(&email_field);
+result = text_field_activate(&email_field);
 if (result == INPUT_RESULT_ENTER) {
     // Process form data
     process_form(name_field.text, email_field.text);

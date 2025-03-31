@@ -3,7 +3,7 @@
 
 # Application definition
 NAME = TEXTBOX
-DESCRIPTION = "User input testbed"
-#ICON = icon.png
+DESCRIPTION = "With ICON"
+ICON = assets/icon.png
 
 include ../makefile.common

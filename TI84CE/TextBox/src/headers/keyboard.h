@@ -12,6 +12,15 @@
 #include <keypadc.h>
 
 /**
+ * Callback types enumeration.
+ */
+enum {
+    CB_DOWN = 0, /**< Key down event */
+    CB_PRESS = 1, /**< Key press event */
+    CB_UP = 2    /**< Key up event */
+};
+
+/**
  * Combined key definition - contains both group and key mask
  * - Bits 0-7: Key mask within the group
  * - Bits 8-10: Group index (0-7)
@@ -89,10 +98,27 @@ typedef enum {
 #define KEY_MASK(key)  ((key) & 0xFF)
 
 // Callback types for key events
-typedef void (*KeyDownCallback)(Key key);
-typedef void (*KeyPressCallback)(Key key);
-typedef void (*KeyUpCallback)(Key key);
-typedef void (*KeyHoldCallback)(Key key, int hold_time);
+typedef void (*KeyDownCallback)(void* sender, Key key);
+typedef void (*KeyPressCallback)(void* sender, Key key);
+typedef void (*KeyUpCallback)(void* sender, Key key);
+typedef void (*KeyHoldCallback)(void* sender, Key key, int hold_time);
+
+/**
+ * Internal structure for callback registration.
+ */
+typedef struct {
+    bool active;                 /**< Whether this entry is active */
+    int id;                      /**< Unique ID for this callback */
+    union {
+        KeyDownCallback down;    /**< Function pointer for down callback */
+        KeyPressCallback press;  /**< Function pointer for press callback */
+        KeyUpCallback up;        /**< Function pointer for up callback */
+    } callback;
+    void* obj;                   /**< Pointer to the sender of the callback */
+    int type;                    /**< Type of callback (0=down, 1=press, 2=up) */
+    int repeat_delay;            /**< Time before repeating (for press) */
+    int repeat_interval;         /**< Interval between repeats (for press) */
+} CallbackEntry;
 
 #include "keyboard_public.h"
 

@@ -9,31 +9,6 @@
 // Maximum number of key callbacks that can be registered
 #define MAX_CALLBACKS 16
 
-/**
- * Internal structure for callback registration.
- */
-typedef struct {
-    bool active;                 /**< Whether this entry is active */
-    int id;                      /**< Unique ID for this callback */
-    union {
-        KeyDownCallback down;    /**< Function pointer for down callback */
-        KeyPressCallback press;  /**< Function pointer for press callback */
-        KeyUpCallback up;        /**< Function pointer for up callback */
-    } callback;
-    int type;                    /**< Type of callback (0=down, 1=press, 2=up) */
-    int repeat_delay;            /**< Time before repeating (for press) */
-    int repeat_interval;         /**< Interval between repeats (for press) */
-} CallbackEntry;
-
-/**
- * Callback types enumeration.
- */
-enum {
-    CB_DOWN = 0, /**< Key down event */
-    CB_PRESS = 1, /**< Key press event */
-    CB_UP = 2    /**< Key up event */
-};
-
 // Static state variables
 static CallbackEntry callbacks[MAX_CALLBACKS];   /**< Array of callback entries */
 static int next_callback_id = 1;                 /**< Next available callback ID (starts at 1) */
@@ -73,7 +48,7 @@ void key_init(void) {
  * @param callback The function to call when a key is pressed down.
  * @return The ID of the registered callback, or -1 if registration failed.
  */
-int key_register_down(KeyDownCallback callback) {
+int key_register_down(void* obj, KeyDownCallback callback) {
     if (!initialized) key_init();
 
     log_message("Registering key down callback...");
@@ -94,6 +69,7 @@ int key_register_down(KeyDownCallback callback) {
     }
     
     // Set up the callback entry
+    callbacks[slot].obj = obj;
     callbacks[slot].active = true;
     callbacks[slot].id = next_callback_id++;
     callbacks[slot].callback.down = callback;
@@ -112,7 +88,7 @@ int key_register_down(KeyDownCallback callback) {
  * @param repeat_interval_ms Interval between repeated press events, in milliseconds.
  * @return The ID of the registered callback, or -1 if registration failed.
  */
-int key_register_press(KeyPressCallback callback, int repeat_delay_ms, int repeat_interval_ms) {
+int key_register_press(void* obj, KeyPressCallback callback, int repeat_delay_ms, int repeat_interval_ms) {
     if (!initialized) key_init();
 
     log_message("Registering key press callback...");
@@ -133,6 +109,7 @@ int key_register_press(KeyPressCallback callback, int repeat_delay_ms, int repea
     }
     
     // Set up the callback entry
+    callbacks[slot].obj = obj;
     callbacks[slot].active = true;
     callbacks[slot].id = next_callback_id++;
     callbacks[slot].callback.press = callback;
@@ -151,7 +128,7 @@ int key_register_press(KeyPressCallback callback, int repeat_delay_ms, int repea
  * @param callback The function to call when a key is released.
  * @return The ID of the registered callback, or -1 if registration failed.
  */
-int key_register_up(KeyUpCallback callback) {
+int key_register_up(void* obj, KeyUpCallback callback) {
     if (!initialized) key_init();
 
     log_message("Registering key up callback...");
@@ -172,6 +149,7 @@ int key_register_up(KeyUpCallback callback) {
     }
     
     // Set up the callback entry
+    callbacks[slot].obj = obj;
     callbacks[slot].active = true;
     callbacks[slot].id = next_callback_id++;
     callbacks[slot].callback.up = callback;
@@ -261,6 +239,9 @@ static unsigned long key_get_millis(void) {
 Key key_wait(void) {
     if (!initialized) key_init();
     log_message("Waiting for key...");
+    log_message("key_sensitivity: %d", key_sensitivity);
+    log_message("key_repeat_delay: %d", key_repeat_delay);
+    log_message("key_repeat_interval: %d", key_repeat_interval);
     
     Key key = KEY_NONE;
     bool key_down = false;
@@ -286,7 +267,7 @@ Key key_wait(void) {
                 // Process key down callbacks
                 for (int i = 0; i < MAX_CALLBACKS; i++) {
                     if (callbacks[i].active && callbacks[i].type == CB_DOWN) {
-                        callbacks[i].callback.down(key);
+                        callbacks[i].callback.down(callbacks[i].obj, key);
                     }
                 }
                 break;
@@ -304,7 +285,6 @@ Key key_wait(void) {
     unsigned long start_time = key_get_millis();
     unsigned long last_repeat_time = start_time;
     int wait_delay = -1;
-    bool first_repeat = true;
     
     // Process repeats while key is held down
     do {
@@ -312,21 +292,22 @@ Key key_wait(void) {
         unsigned long elapsed = current_time - last_repeat_time;
         
         // Check if it's time for a repeat
-        if (elapsed >= (unsigned long)wait_delay) {
+        log_message("wait_delay: %d elapsed: %lu", wait_delay, elapsed);
+        if ((int)elapsed >= wait_delay) {
+            log_message("Processing callbacks");
+            
             // Process press callbacks
             for (int i = 0; i < MAX_CALLBACKS; i++) {
                 if (callbacks[i].active && callbacks[i].type == CB_PRESS) {
-                    callbacks[i].callback.press(key);
+                    callbacks[i].callback.press(callbacks[i].obj, key);
                 }
             }
             
             // Update timing for next repeat
+            wait_delay = (wait_delay == -1) ? key_repeat_delay : key_repeat_interval;
             last_repeat_time = current_time;
-            if (first_repeat) {
-                wait_delay = wait_delay == -1 ? key_repeat_delay : key_repeat_interval;
-                first_repeat = false;
-            }
         }
+        log_message("wait_delay: %d ", wait_delay);
         
         // Small delay to reduce CPU usage
         delay(key_sensitivity);
@@ -341,7 +322,7 @@ Key key_wait(void) {
     // Key has been released, process up callbacks
     for (int i = 0; i < MAX_CALLBACKS; i++) {
         if (callbacks[i].active && callbacks[i].type == CB_UP) {
-            callbacks[i].callback.up(key);
+            callbacks[i].callback.up(callbacks[i].obj, key);
         }
     }
     

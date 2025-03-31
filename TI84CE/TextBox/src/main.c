@@ -76,11 +76,11 @@ int main(void) {
         // Process input for the username field
         if (!username_field.is_active && !password_field.is_active) {
             username_field.is_active = true;
-            result = text_field_get_focus(&username_field);
+            result = text_field_activate(&username_field);
             
             // Handle result
             if (result == TEXT_RESULT_CLEAR) {
-                running = false;
+                break;
             }
             else if (result == TEXT_RESULT_NEXT) {
                 // Focus automatically moves to password_field
@@ -90,11 +90,11 @@ int main(void) {
         // Process input for the password field if username field is done
         if (!username_field.is_active && !password_field.is_active) {
             password_field.is_active = true;
-            result = text_field_get_focus(&password_field);
+            result = text_field_activate(&password_field);
             
             // Handle result
             if (result == TEXT_RESULT_CLEAR) {
-                running = false;
+                break;
             }
             else if (result == TEXT_RESULT_ENTER) {
                 // Form was submitted, result is displayed

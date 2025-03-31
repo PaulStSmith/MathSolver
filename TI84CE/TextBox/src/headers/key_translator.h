@@ -11,6 +11,35 @@
 #include <stdbool.h>
 #include "keyboard.h"
 
+// Callback types for character events
+typedef void (*CharDownCallback)(void* sender, int value);
+typedef void (*CharPressCallback)(void* sender, int value);
+typedef void (*CharUpCallback)(void* sender, int value);
+
+/** 
+ * Internal structure for callback registration.
+ * Stores information about a registered callback, including its type, ID, and function pointer.
+ */
+typedef struct {
+    bool active;                     /**< Whether this entry is active. */
+    int id;                          /**< Unique ID for this callback. */
+    union {
+        CharDownCallback down;       /**< Function pointer for down callback. */
+        CharPressCallback press;     /**< Function pointer for press callback. */
+        CharUpCallback up;           /**< Function pointer for up callback. */
+    } callback;                      /**< Union to store the callback function pointer. */
+    int type;                        /**< Type of callback (0=down, 1=press, 2=up). */
+    int repeat_delay;                /**< Time before repeating (for press). */
+    int repeat_interval;             /**< Interval between repeats (for press). */
+} CharCallbackEntry;
+
+/** Callback types for character events. */
+enum {
+    CHAR_CB_DOWN = 0,  /**< Callback for key down events. */
+    CHAR_CB_PRESS = 1, /**< Callback for key press events. */
+    CHAR_CB_UP = 2     /**< Callback for key up events. */
+};
+
 /**
  * Constants for special key values that don't have direct character representations
  */
@@ -121,11 +150,6 @@ typedef enum {
     KB_MODE_ALPHA_LOCK       = 10,  // ALPHA | LOCKED
     KB_MODE_ALPHA_LOWER_LOCK = 14   // ALPHA | LOWER | LOCKED
 } KeyboardMode;
-
-// Callback types for character events
-typedef void (*CharDownCallback)(int value);
-typedef void (*CharPressCallback)(int value);
-typedef void (*CharUpCallback)(int value);
 
 #include "key_translator_public.h"
 #endif // KEY_TRANSLATOR_H

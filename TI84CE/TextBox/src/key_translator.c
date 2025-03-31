@@ -9,30 +9,6 @@
 /** Maximum number of character callbacks that can be registered. */
 #define MAX_CHAR_CALLBACKS 16
 
-/** 
- * Internal structure for callback registration.
- * Stores information about a registered callback, including its type, ID, and function pointer.
- */
-typedef struct {
-    bool active;                     /**< Whether this entry is active. */
-    int id;                          /**< Unique ID for this callback. */
-    union {
-        CharDownCallback down;       /**< Function pointer for down callback. */
-        CharPressCallback press;     /**< Function pointer for press callback. */
-        CharUpCallback up;           /**< Function pointer for up callback. */
-    } callback;                      /**< Union to store the callback function pointer. */
-    int type;                        /**< Type of callback (0=down, 1=press, 2=up). */
-    int repeat_delay;                /**< Time before repeating (for press). */
-    int repeat_interval;             /**< Interval between repeats (for press). */
-} CharCallbackEntry;
-
-/** Callback types for character events. */
-enum {
-    CHAR_CB_DOWN = 0,  /**< Callback for key down events. */
-    CHAR_CB_PRESS = 1, /**< Callback for key press events. */
-    CHAR_CB_UP = 2     /**< Callback for key up events. */
-};
-
 // Static state variables
 /** Array of callback entries. */
 static CharCallbackEntry char_callbacks[MAX_CHAR_CALLBACKS];
@@ -53,7 +29,7 @@ static int key_callback_ids[3] = {-1, -1, -1};
  * Initialize the key translator subsystem.
  * Sets up the necessary state and registers callbacks with the keyboard layer.
  */
-void char_init(void) {
+void char_init(void* field) {
     if (char_initialized) {
         log_message("char_init: Already initialized.");
         return;
@@ -77,9 +53,9 @@ void char_init(void) {
     last_physical_key = KEY_NONE;
     
     // Register callbacks with keyboard layer
-    key_callback_ids[0] = key_register_down(on_key_down);
-    key_callback_ids[1] = key_register_press(on_key_press, 500, 100);
-    key_callback_ids[2] = key_register_up(on_key_up);
+    key_callback_ids[0] = key_register_down(field, on_key_down);
+    key_callback_ids[1] = key_register_press(field, on_key_press, 500, 100);
+    key_callback_ids[2] = key_register_up(field, on_key_up);
     
     char_initialized = true;
     log_message("char_init: Key translator subsystem initialized.");
@@ -115,9 +91,9 @@ void char_deinit(void) {
  * @param callback The function to call when a key is pressed down.
  * @return The ID of the registered callback, or -1 if registration failed.
  */
-int char_register_down(CharDownCallback callback) {
+int char_register_down(void* obj, CharDownCallback callback) {
     log_message("char_register_down: Registering down callback.");
-    if (!char_initialized) char_init();
+    if (!char_initialized) char_init(obj);
     
     // Find an empty slot
     int slot = -1;
@@ -152,9 +128,9 @@ int char_register_down(CharDownCallback callback) {
  * @param repeat_interval_ms Interval in milliseconds between repeated press events.
  * @return The ID of the registered callback, or -1 if registration failed.
  */
-int char_register_press(CharPressCallback callback, int repeat_delay_ms, int repeat_interval_ms) {
+int char_register_press(void* obj, CharPressCallback callback, int repeat_delay_ms, int repeat_interval_ms) {
     log_message("char_register_press: Registering press callback.");
-    if (!char_initialized) char_init();
+    if (!char_initialized) char_init(obj);
     
     // Find an empty slot
     int slot = -1;
@@ -189,9 +165,9 @@ int char_register_press(CharPressCallback callback, int repeat_delay_ms, int rep
  * @param callback The function to call when a key is released.
  * @return The ID of the registered callback, or -1 if registration failed.
  */
-int char_register_up(CharUpCallback callback) {
+int char_register_up(void* obj, CharUpCallback callback) {
     log_message("char_register_up: Registering up callback.");
-    if (!char_initialized) char_init();
+    if (!char_initialized) char_init(obj);
     
     // Find an empty slot
     int slot = -1;
@@ -265,9 +241,9 @@ void char_clear_callbacks(void) {
  * 
  * @return The translated character value of the pressed key.
  */
-int char_get_char(void) {
+int char_get_char(void* field) {
     log_message("char_get_char: Waiting for any character input.");
-    if (!char_initialized) char_init();
+    if (!char_initialized) char_init(field);
     
     // Wait for a key press and process it completely
     Key key = key_wait();
@@ -306,40 +282,51 @@ void char_set_mode(KeyboardMode mode) {
  * @return True if the key was handled as a mode key, false otherwise.
  */
 bool char_process_mode_key(Key key) {
-    log_message("char_process_mode_key: Processing mode key %d.", key);
-    bool handled = false;
-    
+    if (key != KEY_2ND && key != KEY_ALPHA) {
+        return false;
+    }
+    log_message("char_process_mode_key: Current mode is %d.", current_mode);
+    log_message("is 2nd      : %x", current_mode & KB_MODE_2ND);
+    log_message("is alpha    : %x", current_mode & KB_MODE_ALPHA);	
+    log_message("is lower    : %x", current_mode & KB_MODE_LOWER);
+    log_message("is lock     : %x", current_mode & KB_MODE_LOCK);
     if (key == KEY_2ND) {
         // 2nd key pressed - toggle 2nd mode
+        log_message("char_process_mode_key: 2nd key pressed.");
         current_mode ^= KB_MODE_2ND;
-        handled = true;
     } 
     else if (key == KEY_ALPHA) {
         // Alpha key pressed
-        if (current_mode & ~KB_MODE_ALPHA) {
+        log_message("char_process_mode_key: Alpha key pressed.");
+
+        if ((current_mode & KB_MODE_ALPHA) == 0) {
+            log_message("char_process_mode_key: Changing to alpha mode.");
             current_mode |= KB_MODE_ALPHA;                      // Set alpha mode
-        } else if (current_mode & KB_MODE_ALPHA) {
+        } else if ((current_mode & KB_MODE_LOWER) == 0) {
+            log_message("char_process_mode_key: Changing to alpha lower mode.");
             // If we are in alpha mode, change to alpha lower
             current_mode |= KB_MODE_ALPHA_LOWER;                // Set alpha lower mode
         } else if (current_mode & KB_MODE_LOWER) {
+            log_message("char_process_mode_key: Changing to normal.");
             // If we are in lower mode, return to normal mode
             current_mode = current_mode & ~KB_MODE_ALPHA_LOWER; // Remove alpha lower mode
             current_mode = current_mode & ~KB_MODE_LOCK;        // Remove locked mode
         }
         
         if (current_mode & KB_MODE_2ND) {
+            log_message("char_process_mode_key: Changing to locked mode.");
             current_mode |= KB_MODE_LOCK;                       // Set locked mode
         } 
         current_mode = current_mode & ~KB_MODE_2ND;             // Remove 2nd mode
-        handled = true;
     }
+
+    log_message("char_process_mode_key: New mode is %d.", current_mode);
+    log_message("is 2nd      : %x", current_mode & KB_MODE_2ND);
+    log_message("is alpha    : %x", current_mode & KB_MODE_ALPHA);	
+    log_message("is lower    : %x", current_mode & KB_MODE_LOWER);
+    log_message("is lock     : %x", current_mode & KB_MODE_LOCK);
     
-    if (handled) {
-        log_message("char_process_mode_key: Key %d handled as mode key.", key);
-    } else {
-        log_message("char_process_mode_key: Key %d not handled as mode key.", key);
-    }
-    return handled;
+    return true;
 }
 
 /**
@@ -625,7 +612,7 @@ void char_value_to_string(int value, char* buffer) {
  * 
  * @param key The key that was pressed down.
  */
-static void on_key_down(Key key) {
+static void on_key_down(void* sender, Key key) {
     log_message("on_key_down: Key down event for key %d.", key);
     
     // Process mode keys first
@@ -641,17 +628,15 @@ static void on_key_down(Key key) {
     // Trigger char_down callbacks
     for (int i = 0; i < MAX_CHAR_CALLBACKS; i++) {
         if (char_callbacks[i].active && char_callbacks[i].type == CHAR_CB_DOWN) {
-            char_callbacks[i].callback.down(value);
+            char_callbacks[i].callback.down(sender, value);
         }
     }
     
-    // Auto-reset 2nd mode after key press (unless in Alpha Lock or Alpha Lower Lock)
-    if ((current_mode & KB_MODE_2ND) && !(current_mode & KB_MODE_LOCK)) {
-        current_mode &= ~KB_MODE_2ND;
-    }
+    // Auto-reset 2nd mode after key press
+    current_mode &= ~KB_MODE_2ND;
     
     // Auto-reset Alpha mode after key press (unless in Alpha Lock or Alpha Lower Lock)
-    if ((current_mode & KB_MODE_ALPHA) && !(current_mode & KB_MODE_LOCK)) {
+    if (!(current_mode & KB_MODE_LOCK)) {
         current_mode &= ~(KB_MODE_ALPHA | KB_MODE_LOWER);
     }
     log_message("on_key_down: Key down event processed for key %d.", key);
@@ -662,7 +647,7 @@ static void on_key_down(Key key) {
  * 
  * @param key The key that was pressed.
  */
-static void on_key_press(Key key) {
+static void on_key_press(void* sender, Key key) {
     log_message("on_key_press: Key press event for key %d.", key);
     
     // Skip if this is a mode key or if it's different from our last key
@@ -673,7 +658,7 @@ static void on_key_press(Key key) {
     // Trigger char_press callbacks
     for (int i = 0; i < MAX_CHAR_CALLBACKS; i++) {
         if (char_callbacks[i].active && char_callbacks[i].type == CHAR_CB_PRESS) {
-            char_callbacks[i].callback.press(last_key_value);
+            char_callbacks[i].callback.press(sender, last_key_value);
         }
     }
     log_message("on_key_press: Key press event processed for key %d.", key);
@@ -684,7 +669,7 @@ static void on_key_press(Key key) {
  * 
  * @param key The key that was released.
  */
-static void on_key_up(Key key) {
+static void on_key_up(void* sender, Key key) {
     log_message("on_key_up: Key up event for key %d.", key);
     
     // Skip if this is a mode key or if it's different from our last key
@@ -695,7 +680,7 @@ static void on_key_up(Key key) {
     // Trigger char_up callbacks
     for (int i = 0; i < MAX_CHAR_CALLBACKS; i++) {
         if (char_callbacks[i].active && char_callbacks[i].type == CHAR_CB_UP) {
-            char_callbacks[i].callback.up(last_key_value);
+            char_callbacks[i].callback.up(sender, last_key_value);
         }
     }
     
