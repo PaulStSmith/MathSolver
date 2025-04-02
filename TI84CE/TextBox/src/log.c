@@ -16,10 +16,7 @@
 /* ============================== Logger Variables ============================== */
 
 /** Maximum length of a single log message */
-#define MAX_LOG_MSG_LENGTH 100
-
-/** Debug AppVar name */
-#define DEBUG_APPVAR_NAME "DBGLOG"
+#define MAX_LOG_MSG_LENGTH 255
 
 /**
  * Initializes the debug logger.
@@ -69,12 +66,88 @@ void log_message(const char* format, ...) {
 }
 
 /**
+ * Logs an informational message.
+ * 
+ * @param format Format string similar to printf.
+ * @param ... Variable arguments for the format string.
+ */
+void log_info(const char* format, ...) {
+    #ifndef DEBUG
+    return;
+    #endif
+
+    va_list args;
+    va_start(args, format);
+    print_log("INFO", format, args);
+    va_end(args);
+}
+
+/**
+ * Logs a warning message.
+ * 
+ * @param format Format string similar to printf.
+ * @param ... Variable arguments for the format string.
+ */
+void log_warning(const char* format, ...) {
+    #ifndef DEBUG
+    return;
+    #endif
+
+    va_list args;
+    va_start(args, format);
+    print_log("WARNING", format, args);
+    va_end(args);
+}
+
+/**
+ * Logs a critical error message.
+ * 
+ * @param format Format string similar to printf.
+ * @param ... Variable arguments for the format string.
+ */
+void log_critical(const char* format, ...) {
+    #ifndef DEBUG
+    return;
+    #endif
+
+    va_list args;
+    va_start(args, format);
+    print_log("CRITICAL", format, args);
+    va_end(args);
+}
+
+/**
  * Logs a debug message.
  * 
- * @param message The debug message to log.
+ * @param format Format string similar to printf.
+ * @param ... Variable arguments for the format string.
  */
-void log_debug(const char* message) {
-    log_message("DEBUG: %s", message);
+void log_debug(const char* format, ...) {
+    #ifndef DEBUG
+    return;
+    #endif
+
+    va_list args;
+    va_start(args, format);
+    print_log("DEBUG", format, args);
+    va_end(args);
+}
+
+/**
+ * Logs an error message.
+ * 
+ * @param format Format string similar to printf.
+ * @param ... Variable arguments for the format string.
+ */
+void log_error(const char* format, ...) {
+    #ifndef DEBUG
+    return;
+    #endif
+
+    va_list args;
+    va_start(args, format);
+    print_log("ERROR", format, args);
+    va_end(args);
 }
 
 /**
@@ -98,10 +171,14 @@ void log_operation(const char* operation, char* result) {
 }
 
 /**
- * Logs an error message.
+ * Helper function to format and print log messages.
  * 
- * @param error The error message.
+ * @param tag The log level tag (e.g., INFO, WARNING).
+ * @param format Format string similar to printf.
+ * @param args Variable argument list.
  */
-void log_error(const char* error) {
-    log_message("ERROR: %s", error);
+static void print_log(const char* tag, const char* format, va_list args) {
+    static char msg[MAX_LOG_MSG_LENGTH];
+    vsnprintf(msg, MAX_LOG_MSG_LENGTH - 2, format, args);
+    dbg_printf("%s: %s\n", tag, msg);
 }

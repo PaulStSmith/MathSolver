@@ -47,9 +47,6 @@ void text_field_init(TextField* field, int x, int y, int width, bool has_border)
     field->read_only = false;
     field->password_mode = false;
     field->password_char = '*';
-    field->has_selection = false;
-    field->selection_start = 0;
-    field->selection_end = 0;
     field->next_field = NULL;
     field->prev_field = NULL;
     field->on_changed = NULL;
@@ -116,9 +113,6 @@ void text_field_clear(TextField* field) {
     field->text_length = 0;
     field->cursor_position = 0;
     field->scroll_offset = 0;
-    field->has_selection = false;
-    field->selection_start = 0;
-    field->selection_end = 0;
     
     // Trigger on_changed callback if registered
     if (field->on_changed) {
@@ -141,9 +135,6 @@ void text_field_set_text(TextField* field, const char* text) {
         
         // Reset cursor and scroll
         field->cursor_position = length;
-        field->has_selection = false;
-        field->selection_start = 0;
-        field->selection_end = 0;
         ensure_cursor_visible(field);
         
         // Trigger on_changed callback if registered
@@ -231,11 +222,6 @@ static void text_field_insert_char(TextField* field, char c) {
     log_message("Inserting character '%c' at position %d", c, field->cursor_position);
     
     // If we have a selection, delete it first
-    if (field->has_selection) {
-        // TODO: Implement selection deletion
-        field->has_selection = false;
-    }
-    
     if (ensure_buffer_size(field, field->text_length + 2)) {
         // Shift characters after cursor
         for (int i = field->text_length; i >= field->cursor_position; i--) {
@@ -264,13 +250,6 @@ static void text_field_backspace(TextField* field) {
     if (!field || field->read_only) return;
     log_message("Performing backspace at position %d", field->cursor_position);
     
-    // If we have a selection, delete it
-    if (field->has_selection) {
-        // TODO: Implement selection deletion
-        field->has_selection = false;
-        return;
-    }
-    
     if (field->cursor_position > 0) {
         // Shift characters at and after cursor
         for (int i = field->cursor_position - 1; i < field->text_length; i++) {
@@ -296,13 +275,6 @@ static void text_field_backspace(TextField* field) {
 static void text_field_delete(TextField* field) {
     if (!field || field->read_only) return;
     log_message("Deleting character at position %d", field->cursor_position);
-    
-    // If we have a selection, delete it
-    if (field->has_selection) {
-        // TODO: Implement selection deletion
-        field->has_selection = false;
-        return;
-    }
     
     // Only proceed if we're not at the end of the text
     if (field->cursor_position < field->text_length) {
@@ -351,7 +323,6 @@ static void process_navigation(TextField* field, int value) {
         case CHAR_LEFT:
             if (field->cursor_position > 0) {
                 field->cursor_position--;
-                field->has_selection = false;
                 ensure_cursor_visible(field);
             }
             break;
@@ -359,7 +330,6 @@ static void process_navigation(TextField* field, int value) {
         case CHAR_RIGHT:
             if (field->cursor_position < field->text_length) {
                 field->cursor_position++;
-                field->has_selection = false;
                 ensure_cursor_visible(field);
             }
             break;
@@ -367,12 +337,10 @@ static void process_navigation(TextField* field, int value) {
         case CHAR_HOME:
             field->cursor_position = 0;
             field->scroll_offset = 0;
-            field->has_selection = false;
             break;
             
         case CHAR_END:
             field->cursor_position = field->text_length;
-            field->has_selection = false;
             ensure_cursor_visible(field);
             break;
             

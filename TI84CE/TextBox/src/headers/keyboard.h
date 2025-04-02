@@ -13,6 +13,8 @@
 
 /**
  * Callback types enumeration.
+ * 
+ * Defines the types of key events that can trigger callbacks.
  */
 enum {
     CB_DOWN = 0, /**< Key down event */
@@ -21,7 +23,8 @@ enum {
 };
 
 /**
- * Combined key definition - contains both group and key mask
+ * Combined key definition - contains both group and key mask.
+ * 
  * - Bits 0-7: Key mask within the group
  * - Bits 8-10: Group index (0-7)
  */
@@ -93,18 +96,59 @@ typedef enum {
     KEY_UP       = (7 << 8) | kb_Up
 } Key;
 
-// Helper macros to extract group and mask from combined key value
+/**
+ * Helper macro to extract the group index from a combined key value.
+ * 
+ * @param key The combined key value.
+ * @return The group index (0-7).
+ */
 #define KEY_GROUP(key) (((key) >> 8) & 0x7)
+
+/**
+ * Helper macro to extract the key mask from a combined key value.
+ * 
+ * @param key The combined key value.
+ * @return The key mask (bits 0-7).
+ */
 #define KEY_MASK(key)  ((key) & 0xFF)
 
-// Callback types for key events
+/**
+ * Callback type for key down events.
+ * 
+ * @param sender Pointer to the sender of the event.
+ * @param key The key that triggered the event.
+ */
 typedef void (*KeyDownCallback)(void* sender, Key key);
+
+/**
+ * Callback type for key press events.
+ * 
+ * @param sender Pointer to the sender of the event.
+ * @param key The key that triggered the event.
+ */
 typedef void (*KeyPressCallback)(void* sender, Key key);
+
+/**
+ * Callback type for key up events.
+ * 
+ * @param sender Pointer to the sender of the event.
+ * @param key The key that triggered the event.
+ */
 typedef void (*KeyUpCallback)(void* sender, Key key);
+
+/**
+ * Callback type for key hold events.
+ * 
+ * @param sender Pointer to the sender of the event.
+ * @param key The key that is being held.
+ * @param hold_time The duration (in milliseconds) the key has been held.
+ */
 typedef void (*KeyHoldCallback)(void* sender, Key key, int hold_time);
 
 /**
  * Internal structure for callback registration.
+ * 
+ * This structure is used to manage callback functions for key events.
  */
 typedef struct {
     bool active;                 /**< Whether this entry is active */
@@ -113,7 +157,7 @@ typedef struct {
         KeyDownCallback down;    /**< Function pointer for down callback */
         KeyPressCallback press;  /**< Function pointer for press callback */
         KeyUpCallback up;        /**< Function pointer for up callback */
-    } callback;
+    } callback;                  /**< Union of callback function pointers */
     void* obj;                   /**< Pointer to the sender of the callback */
     int type;                    /**< Type of callback (0=down, 1=press, 2=up) */
     int repeat_delay;            /**< Time before repeating (for press) */

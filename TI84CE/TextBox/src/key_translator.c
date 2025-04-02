@@ -3,8 +3,13 @@
 #include <stdio.h>
 #include "headers/keyboard.h"
 #include "headers/key_translator_private.h"
-
 #include "headers/log.h"
+
+/**
+ * @file key_translator.c
+ * @brief Implements the key translation subsystem for handling keyboard input and translating
+ *        physical key presses into logical character values based on the current keyboard mode.
+ */
 
 /** Maximum number of character callbacks that can be registered. */
 #define MAX_CHAR_CALLBACKS 16
@@ -28,6 +33,8 @@ static int key_callback_ids[3] = {-1, -1, -1};
 /**
  * Initialize the key translator subsystem.
  * Sets up the necessary state and registers callbacks with the keyboard layer.
+ * 
+ * @param field A pointer to the field object for registering callbacks.
  */
 void char_init(void* field) {
     if (char_initialized) {
@@ -88,6 +95,7 @@ void char_deinit(void) {
 /**
  * Register a callback for character down events.
  * 
+ * @param obj The object associated with the callback.
  * @param callback The function to call when a key is pressed down.
  * @return The ID of the registered callback, or -1 if registration failed.
  */
@@ -123,6 +131,7 @@ int char_register_down(void* obj, CharDownCallback callback) {
 /**
  * Register a callback for character press events.
  * 
+ * @param obj The object associated with the callback.
  * @param callback The function to call when a key is pressed.
  * @param repeat_delay_ms Time in milliseconds before repeating the press event.
  * @param repeat_interval_ms Interval in milliseconds between repeated press events.
@@ -162,6 +171,7 @@ int char_register_press(void* obj, CharPressCallback callback, int repeat_delay_
 /**
  * Register a callback for character up events.
  * 
+ * @param obj The object associated with the callback.
  * @param callback The function to call when a key is released.
  * @return The ID of the registered callback, or -1 if registration failed.
  */
@@ -239,6 +249,7 @@ void char_clear_callbacks(void) {
  * Wait for any character input.
  * Blocks until a key is pressed and returns the translated character value.
  * 
+ * @param field A pointer to the field object for registering callbacks.
  * @return The translated character value of the pressed key.
  */
 int char_get_char(void* field) {
@@ -666,6 +677,7 @@ void char_value_to_string(int value, char* buffer) {
 /**
  * Handle key down events from the keyboard layer.
  * 
+ * @param sender The source of the event.
  * @param key The key that was pressed down.
  */
 static void on_key_down(void* sender, Key key) {
@@ -701,6 +713,7 @@ static void on_key_down(void* sender, Key key) {
 /**
  * Handle key press events from the keyboard layer.
  * 
+ * @param sender The source of the event.
  * @param key The key that was pressed.
  */
 static void on_key_press(void* sender, Key key) {
@@ -723,6 +736,7 @@ static void on_key_press(void* sender, Key key) {
 /**
  * Handle key up events from the keyboard layer.
  * 
+ * @param sender The source of the event.
  * @param key The key that was released.
  */
 static void on_key_up(void* sender, Key key) {
