@@ -52,8 +52,6 @@ void text_field_init(TextField* field, int x, int y, int width, bool has_border)
     field->on_changed = NULL;
     field->on_enter = NULL;
     
-    // Set default mode indicator callback
-    field->mode_indicator_callback = draw_mode_indicator_default;
     log_message("Text field initialized successfully");
 }
 
@@ -203,15 +201,6 @@ void text_field_on_changed(TextField* field, void (*callback)(TextField* field))
 void text_field_on_enter(TextField* field, void (*callback)(TextField* field)) {
     if (!field) return;
     field->on_enter = callback;
-}
-
-/**
- * Register a callback to draw the keyboard mode indicator.
- */
-void text_field_register_mode_indicator(TextField* field, 
-                                        void (*callback)(KeyboardMode mode, int x, int y)) {
-    if (!field) return;
-    field->mode_indicator_callback = callback;
 }
 
 /**
@@ -366,47 +355,6 @@ static void process_character_input(TextField* field, int value) {
 }
 
 /**
- * Default implementation for drawing the keyboard mode indicator.
- */
-static void draw_mode_indicator_default(KeyboardMode mode, int x, int y) {
-    GUISettings* settings = GUI_get_settings();
-    char* mode_text = "";
-    
-    switch (mode) {
-        case KB_MODE_NORMAL:
-            return; // No indicator for normal mode
-        case KB_MODE_2ND:
-            mode_text = "2ND";
-            break;
-        case KB_MODE_ALPHA:
-            mode_text = "A";
-            break;
-        case KB_MODE_ALPHA_LOCK:
-            mode_text = "A-LOCK";
-            break;
-        case KB_MODE_ALPHA_LOWER:
-            mode_text = "a";
-            break;
-        case KB_MODE_ALPHA_LOWER_LOCK:
-            mode_text = "a-lock";
-            break;
-        default:
-            mode_text = "??"; // should not happen
-            break;
-    }
-    
-    // Draw the mode indicator with inverted colors
-    int text_width = gfx_GetStringWidth(mode_text);
-    gfx_SetColor(settings->text_color);
-    gfx_FillRectangle(x, y, text_width + 6, 10);
-    
-    // Use GUI functions to set and reset text colors
-    GUI_set_text_colors(settings->bg_color, settings->text_color);
-    GUI_write_text(x + 3, y, mode_text);
-    GUI_reset_text_colors();
-}
-
-/**
  * Draw the text field.
  */
 void text_field_draw(TextField* field) {
@@ -416,19 +364,13 @@ void text_field_draw(TextField* field) {
     GUISettings* settings = GUI_get_settings();
     
     // Draw background and border
+    // Clear the area
+    gfx_SetColor(settings->bg_color);
+    gfx_FillRectangle(field->x, field->y, field->width, field->height);
     if (field->has_border) {
         // Draw border rectangle
         gfx_SetColor(settings->text_color);
         gfx_Rectangle(field->x, field->y, field->width, field->height);
-        
-        // Fill inner area
-        gfx_SetColor(settings->bg_color);
-        gfx_FillRectangle(field->x + 1, field->y + 1, 
-                         field->width - 2, field->height - 2);
-    } else {
-        // Just fill the entire area
-        gfx_SetColor(settings->bg_color);
-        gfx_FillRectangle(field->x, field->y, field->width, field->height);
     }
     
     // Calculate visible area
@@ -536,10 +478,6 @@ static void on_key_press(void* sender, int value) {
     
     // Redraw the field
     text_field_draw(field);
-    if (field->mode_indicator_callback) {
-        field->mode_indicator_callback(char_get_mode(), 
-            field->x, field->y - 12);
-    }
     GUI_refresh();
 }
 
@@ -562,9 +500,6 @@ TextResult text_field_activate(TextField* field) {
     
     // Draw the field initially
     text_field_draw(field);
-    if (field->mode_indicator_callback) {
-        field->mode_indicator_callback(char_get_mode(), field->x, field->y - 12);
-    }
     GUI_refresh();
     
     // Process input until done
@@ -607,9 +542,6 @@ TextResult text_field_activate(TextField* field) {
         
         // Redraw the field after each key press
         text_field_draw(field);
-        if (field->mode_indicator_callback) {
-            field->mode_indicator_callback(char_get_mode(), field->x, field->y - 12);
-        }
         GUI_refresh();
     }
     

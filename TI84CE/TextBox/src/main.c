@@ -2,6 +2,7 @@
 #include <graphx.h>
 #include <string.h>
 #include <stdio.h>
+#include <debug.h>
 #include "headers/keyboard.h"
 #include "headers/key_translator.h"
 #include "headers/text_field.h"
@@ -15,6 +16,27 @@ TextField password_field;
 char result_message[64];
 bool show_result = false;
 
+// Forward declarations
+static void draw_kb_mode(KeyboardMode mode){
+
+    int x = PADDING_X;
+    int y = LCD_HEIGHT - GUI_LINE_HEIGHT - PADDING_Y;
+    char mode_str[32];
+
+    if ((mode & KB_MODE_2ND) == KB_MODE_2ND) {
+        strcpy(mode_str, "\xe1");
+    } else if ((mode & KB_MODE_ALPHA) == KB_MODE_ALPHA) {
+        strcpy(mode_str, "\xe2");
+    } else if ((mode & KB_MODE_LOWER) == KB_MODE_LOWER) {
+        strcpy(mode_str, "\xe3");
+    } else {
+        strcpy(mode_str, " ");
+    }
+
+    GUI_print_text(x, y, mode_str);  // Print the mode string
+    GUI_refresh();  // Refresh the screen to show the mode
+}
+
 // Callback when the form is submitted
 void on_form_submit(TextField* field) {
     // Do something with the input data
@@ -25,11 +47,35 @@ void on_form_submit(TextField* field) {
 }
 
 int main(void) {
+    GUI_init();
+
+    unsigned char a = '\x01';
+    char buffer[256 + 15];
+    memset(buffer, 0, sizeof(buffer));
+
+    buffer[0] = ' ';
+    for (unsigned int i = 1; i < sizeof(buffer); i++) {
+        if (a % 16 == 0) {
+            buffer[i++] = '\n';
+            dbg_printf("%d - new line\n", i);
+        }
+        buffer[i] = a == '\x0a' ? ' ' : a;
+        dbg_printf("%d - %d\n", i, a);
+        a++;
+    }
+    buffer[sizeof(buffer) - 1] = '\0';
+
+    GUI_print_text(PADDING_X, PADDING_Y, buffer);
+    GUI_refresh();
+
+    key_wait_any();
+
+    GUI_end();
+}
+
+static int old_main(void) {
     // Initialize graphics and GUI (no need to call gfx_Begin explicitly)
     GUI_init();
-    
-    // Clear the screen
-    gfx_FillScreen(BG_COLOR);
     
     // Initialize text fields
     text_field_init(&username_field, 80, 60, 160, true);
@@ -43,6 +89,8 @@ int main(void) {
     
     // Register callback for form submission
     text_field_on_enter(&password_field, on_form_submit);
+
+    register_mode_change_callback(draw_kb_mode);
     
     // Display form
     bool running = true;
@@ -111,9 +159,10 @@ int main(void) {
     }
     
     // Clean up
+    unregister_mode_change_callback();
     text_field_free(&username_field);
     text_field_free(&password_field);
-    
+   
     // End graphics (GUI_end will call gfx_End)
     GUI_end();
     

@@ -17,6 +17,8 @@
 // Static state variables
 /** Array of callback entries. */
 static CharCallbackEntry char_callbacks[MAX_CHAR_CALLBACKS];
+/** Callback for mode change events. */
+static ModeChangeCallback mode_change_callback = NULL;
 /** Next available callback ID. */
 static int char_next_callback_id = 1;
 /** Whether the translator is initialized. */
@@ -90,6 +92,34 @@ void char_deinit(void) {
     
     char_initialized = false;
     log_message("char_deinit: Key translator subsystem cleaned up.");
+}
+
+int register_mode_change_callback(ModeChangeCallback callback) {
+    log_message("register_mode_change_callback: Registering mode change callback.");
+    
+    // Store the callback
+    if (mode_change_callback != NULL) {
+        log_message("register_mode_change_callback: Callback already registered.");
+        return -1; // Error: callback already registered
+    }
+    mode_change_callback = callback;
+    
+    log_message("register_mode_change_callback: Callback registered successfully.");
+    return 0; // Success
+}
+
+int unregister_mode_change_callback(void) {
+    log_message("unregister_mode_change_callback: Unregistering mode change callback.");
+    
+    // Clear the callback
+    if (mode_change_callback == NULL) {
+        log_message("unregister_mode_change_callback: No callback registered.");
+        return -1; // Error: no callback registered
+    }
+    mode_change_callback = NULL;
+    
+    log_message("unregister_mode_change_callback: Callback unregistered successfully.");
+    return 0; // Success
 }
 
 /**
@@ -301,6 +331,9 @@ bool char_process_mode_key(Key key) {
     log_message("is alpha    : %x", current_mode & KB_MODE_ALPHA);	
     log_message("is lower    : %x", current_mode & KB_MODE_LOWER);
     log_message("is lock     : %x", current_mode & KB_MODE_LOCK);
+
+    KeyboardMode old_mode = current_mode; // Store the old mode for logging
+
     if (key == KEY_2ND) {
         // 2nd key pressed - toggle 2nd mode
         log_message("char_process_mode_key: 2nd key pressed.");
@@ -329,6 +362,14 @@ bool char_process_mode_key(Key key) {
             current_mode |= KB_MODE_LOCK;                       // Set locked mode
         } 
         current_mode = current_mode & ~KB_MODE_2ND;             // Remove 2nd mode
+    }
+
+    // Check if the mode has changed and invoke the callback if registered
+    if (old_mode != current_mode && mode_change_callback) {
+        log_message("char_process_mode_key: Mode change detected, invoking callback.");
+        mode_change_callback(current_mode);
+    } else {
+        log_message("char_process_mode_key: No mode change detected.");
     }
 
     log_message("char_process_mode_key: New mode is %d.", current_mode);

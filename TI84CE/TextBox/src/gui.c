@@ -237,7 +237,7 @@ static void _GUI_print_text_internal(int x, int y, const char* text, int max_wid
         }
         
         // Print the chunk
-        gfx_PrintStringXY(chunk, x, y);
+       GUI_put_text(x, y, chunk); 
         
         // Move to next line
         y += GUI_LINE_HEIGHT;
@@ -248,4 +248,16 @@ static void _GUI_print_text_internal(int x, int y, const char* text, int max_wid
             break;  // Stop if we've reached bottom of screen
         }
     }
+}
+
+static void GUI_put_text(int x, int y, const char* text) {
+    GUISettings* settings = GUI_get_settings();
+
+    int width = gfx_GetStringWidth(text);               /**< Get the width of the string */
+    
+    gfx_SetColor(settings->bg_color);
+    gfx_FillRectangle(x, y, width, GUI_LINE_HEIGHT);    /**< Clear the area where the text will be printed */
+
+    gfx_SetColor(_settings_.text_color);                /**< Set the text color */
+    gfx_PrintStringXY(text, x, y);                      /**< Print the string at the specified position */
 }

@@ -11,6 +11,20 @@
 #include <stdbool.h>
 #include "keyboard.h"
 
+/**
+ * Calculator keyboard modes
+ */
+typedef enum {
+    KB_MODE_NORMAL           = 0,
+    KB_MODE_2ND              = 1,
+    KB_MODE_ALPHA            = 2,
+    KB_MODE_LOWER            = 4,
+    KB_MODE_LOCK             = 8,
+    KB_MODE_ALPHA_LOWER      = 6,   // ALPHA | LOWER
+    KB_MODE_ALPHA_LOCK       = 10,  // ALPHA | LOCKED
+    KB_MODE_ALPHA_LOWER_LOCK = 14   // ALPHA | LOWER | LOCKED
+} KeyboardMode;
+
 // Callback types for character events
 
 /**
@@ -36,6 +50,7 @@ typedef void (*CharPressCallback)(void* sender, int value);
  * @param value The logical value of the key released.
  */
 typedef void (*CharUpCallback)(void* sender, int value);
+typedef void (*ModeChangeCallback)(KeyboardMode mode);
 
 /** 
  * Internal structure for callback registration.
@@ -158,20 +173,6 @@ typedef enum {
     FUNC_POLAR       = 188, /**< Polar function key. */
     FUNC_STRING      = 189  /**< String function key. */
 } CharValue;
-
-/**
- * Calculator keyboard modes.
- */
-typedef enum {
-    KB_MODE_NORMAL           = 0,  /**< Normal keyboard mode. */
-    KB_MODE_2ND              = 1,  /**< 2nd modifier mode. */
-    KB_MODE_ALPHA            = 2,  /**< Alpha modifier mode. */
-    KB_MODE_LOWER            = 4,  /**< Lowercase alpha mode. */
-    KB_MODE_LOCK             = 8,  /**< Locked mode. */
-    KB_MODE_ALPHA_LOWER      = 6,  /**< Combined Alpha and Lowercase mode. */
-    KB_MODE_ALPHA_LOCK       = 10, /**< Combined Alpha and Locked mode. */
-    KB_MODE_ALPHA_LOWER_LOCK = 14  /**< Combined Alpha, Lowercase, and Locked mode. */
-} KeyboardMode;
 
 #include "key_translator_public.h"
 #endif // KEY_TRANSLATOR_H
