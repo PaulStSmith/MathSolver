@@ -87,7 +87,7 @@ static void new_line(void) {
  * 
  * @param str The string to print.
  */
-void print(const char* str) {
+void print(char* str) {
     os_PutStrFull(str);
 }
 
@@ -96,7 +96,7 @@ void print(const char* str) {
  * 
  * @param str The string to print.
  */
-void println(const char* str) {
+void println(char* str) {
     print(str);
     new_line();
 }
@@ -118,7 +118,7 @@ void print_footer(char* str) {
  * 
  * @param text The string to center.
  */
-void print_centered(const char* str) {
+void print_centered(char* str) {
     int len = strlen(str);
     int padL = (SCREEN_COLS - len) / 2;
     int padR = SCREEN_COLS - padL - len - 1;
@@ -132,7 +132,7 @@ void print_centered(const char* str) {
  * 
  * @param str The string to center.
  */
-void print_centeredln(const char* str) {
+void print_centeredln(char* str) {
     int len = strlen(str);
     int padding = (SCREEN_COLS - len) / 2;
     println_format("%*s%s", padding, "", str);
@@ -144,7 +144,7 @@ void print_centeredln(const char* str) {
  * @param text The string to print.
  * @param max_length The maximum length of the string to display.
  */
-void print_truncated(const char* str, int max_length) {
+void print_truncated(char* str, int max_length) {
     char buffer[SCREEN_COLS + 1];
     
     if (max_length > SCREEN_COLS) {
@@ -169,7 +169,7 @@ void print_truncated(const char* str, int max_length) {
  * @param format The format string to print.
  * @param ... Additional arguments to format.
  */
-void print_format(const char* format, ...) {
+void print_format(char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
@@ -185,7 +185,7 @@ void print_format(const char* format, ...) {
  * @param format The format string to print.
  * @param ... Additional arguments to format.
  */
-void println_format(const char* format, ...) {
+void println_format(char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
@@ -201,7 +201,7 @@ void println_format(const char* format, ...) {
  * @param format The format string to print.
  * @param ... Additional arguments to format.
  */
-void print_format_centered(const char* format, ...) {
+void print_format_centered(char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
@@ -218,7 +218,7 @@ void print_format_centered(const char* format, ...) {
  * @param format The format string to print.
  * @param ... Additional arguments to format.
  */
-void println_format_truncated(const char* format, ...) {
+void println_format_truncated(char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
@@ -228,7 +228,12 @@ void println_format_truncated(const char* format, ...) {
     print_truncated(buffer, SCREEN_COLS - 1);
 }
 
-void print_right(const char* str) {
+/**
+ * Prints a string aligned to the right side of the screen at the current cursor row.
+ * 
+ * @param str The string to print.
+ */
+void print_right(char* str) {
     unsigned int curRow;
     unsigned int curCol;
     os_GetCursorPos(&curRow, &curCol);
@@ -236,12 +241,24 @@ void print_right(const char* str) {
     print(str);
 }
 
-void println_right(const char* str) {
+/**
+ * Prints a string aligned to the right side of the screen at the current cursor row,
+ * followed by a newline character.
+ * 
+ * @param str The string to print.
+ */
+void println_right(char* str) {
     print_right(str);
     new_line();
 }
 
-void print_format_right(const char* format, ...) {
+/**
+ * Prints a formatted string aligned to the right side of the screen at the current cursor row.
+ * 
+ * @param format The format string to print.
+ * @param ... Additional arguments to format.
+ */
+void print_format_right(char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
@@ -251,7 +268,14 @@ void print_format_right(const char* format, ...) {
     print_right(buffer);
 }
 
-void println_format_right(const char* format, ...) {
+/**
+ * Prints a formatted string aligned to the right side of the screen at the current cursor row,
+ * followed by a newline character.
+ * 
+ * @param format The format string to print.
+ * @param ... Additional arguments to format.
+ */
+void println_format_right(char* format, ...) {
     char buffer[255];
     va_list args;
     va_start(args, format);
@@ -262,9 +286,11 @@ void println_format_right(const char* format, ...) {
 }
 
 /**
- * Draws a horizontal line across the screen using the specified character.
+ * Draws a horizontal line across the screen using the dash character ('-').
  * 
- * @param line_char The character to use for the horizontal line.
+ * This function draws a horizontal line that spans the entire width of the screen
+ * at the current cursor position. It preserves the current row position but sets
+ * the column position to 0 before drawing the line.
  */
 static void draw_horizontal_line(void) {
 
@@ -327,6 +353,15 @@ void show_input_prompt(void) {
     println("Enter expression:");
 }
 
+/**
+ * Displays the calculation result with step-by-step details if available.
+ * 
+ * This function shows the calculation result and allows the user to scroll
+ * through individual calculation steps. It handles different formatting
+ * depending on the current arithmetic mode.
+ * 
+ * @param result Pointer to the calculation result structure to display.
+ */
 void show_calculation_result(CalculationResult* result) {
     int cnt = result->step_count;
     if (step_scroll_position < 0) {
@@ -355,14 +390,14 @@ void show_calculation_result(CalculationResult* result) {
     
     if (step_scroll_position == 0) {
         os_SetCursorPos(2, 0);
-        println("Formatado:");
+        println("Result:");
         print_right(rst);
         
         if (mode != ARITHMETIC_NORMAL) {
             os_SetCursorPos(4, 0);
             char norm[MAX_TOKEN_LENGTH];
             format_real(result->normal_value, norm);
-            println("Formatted:");
+            println("True Value:");
             print_right(norm);
             os_SetCursorPos(6, 0);
             println("Diff:");
@@ -401,7 +436,7 @@ void show_calculation_result(CalculationResult* result) {
  * 
  * @param message The error message to display.
  */
-void show_error_message(const char* message) {
+void show_error_message(char* message) {
     draw_header();
     println("ERROR:");
     println(message);
@@ -794,6 +829,14 @@ static void update_precision(void) {
  * Miscellaneous utility functions for the calculator UI.
  */
 
+/**
+ * Returns a string representation of the current arithmetic mode with precision.
+ * 
+ * This function constructs a formatted string that represents the current
+ * arithmetic mode and precision settings.
+ * 
+ * @return A pointer to a buffer containing the mode string.
+ */
 char* get_mode_str(void) {
     static char buffer[50];
     ArithmeticType mode = get_arithmetic_mode();
